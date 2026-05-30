@@ -92,6 +92,12 @@ select.inp{appearance:none;-webkit-appearance:none;background-image:url("data:im
 #mb.open{display:flex;}
 #mb-inner{flex:1;overflow-y:auto;-webkit-overflow-scrolling:touch;padding:20px 18px 8px;min-height:0;background:#fff;}
 #mb-foot{flex-shrink:0;padding:14px 18px;padding-bottom:max(18px,calc(14px + var(--safe-b)));background:#fff;border-top:1px solid var(--border);}
+/* ── Swipe to delete ── */
+.sw-row{position:relative;overflow:hidden;}
+.sw-content{position:relative;background:var(--s1);transition:transform .2s ease;will-change:transform;}
+.sw-actions{position:absolute;right:0;top:0;bottom:0;width:80px;display:flex;align-items:stretch;}
+.sw-del{width:80px;background:var(--red);color:#fff;border:none;cursor:pointer;display:flex;flex-direction:column;align-items:center;justify-content:center;font-size:18px;font-weight:700;border-radius:0;}
+
 ::-webkit-scrollbar{width:0;}
 </style>
 </head>
@@ -421,7 +427,7 @@ function escH(s){return String(s).replace(/&/g,'&amp;').replace(/"/g,'&quot;').r
 function yLabel(n){const a=Math.abs(n);if(a>=1e6)return'S$'+(n/1e6).toFixed(1)+'M';if(a>=1000)return'S$'+(n/1000).toFixed(0)+'k';return'S$'+Math.round(n);}
 
 let _tt;
-function showToast(msg,dur=3000){const t=document.getElementById('toast');t.textContent=msg;t.classList.add('show');clearTimeout(_tt);_tt=setTimeout(()=>t.classList.remove('show'),dur);}
+function showToast(msg,dur=2500){const t=document.getElementById('toast');t.textContent=msg;t.classList.add('show');clearTimeout(_tt);_tt=setTimeout(()=>t.classList.remove('show'),dur);}
 
 let _modalCb=null;
 function openModal(html,lbl,cb){
@@ -665,12 +671,38 @@ function saveEntry(){
 
 // ── ENTRY RENAME/ADD ──
 function markRenameDirty(orig){const inp=event&&event.target;if(!inp)return;const t=document.getElementById('rename-modal-title');if(!t)return;const ch=inp.value.trim()!==orig.trim()&&inp.value.trim()!=='';t.style.fontWeight=ch?'900':'800';t.style.color=ch?'var(--blue)':'var(--text)';}
-function entryRenameCategory(ci){const cats=[...new Set(D.accounts.filter(a=>a.type==='asset').map(a=>a.category))],cat=cats[ci];if(!cat)return;openModal(`<div id="rename-modal-title" style="font-family:'Syne',sans-serif;font-size:17px;font-weight:800;margin-bottom:16px;color:var(--text)">Rename Category</div><div class="lbl">Current name</div><div style="padding:10px 14px;background:var(--s2);border-radius:10px;font-weight:600;margin-bottom:14px" id="erc-old"></div><div class="lbl">New name</div><input class="inp" id="erc-new" oninput="markRenameDirty('${escH(cat)}')"/>`,
-'Rename',()=>{const n=(document.getElementById('erc-new').value||'').trim();if(!n){showToast('Enter a name');return;}D.accounts=D.accounts.map(a=>a.category===cat?{...a,category:n}:a);saveState();closeModal();const v={};document.querySelectorAll('.ei').forEach(i=>v[i.dataset.id]=parseFloat(i.value)||0);buildEntry(v);showToast('Renamed ✓');});
-setTimeout(()=>{const el=document.getElementById('erc-old');if(el)el.textContent=cat;const inp=document.getElementById('erc-new');if(inp){inp.value=cat;inp.select();inp.focus();}},40);}
-function entryRenameAccount(id){const acc=D.accounts.find(a=>a.id===id);if(!acc)return;openModal(`<div id="rename-modal-title" style="font-family:'Syne',sans-serif;font-size:17px;font-weight:800;margin-bottom:16px;color:var(--text)">Rename Account</div><div class="lbl">Current name</div><div style="padding:10px 14px;background:var(--s2);border-radius:10px;font-weight:600;margin-bottom:14px" id="era-old"></div><div class="lbl">New name</div><input class="inp" id="era-new" oninput="markRenameDirty('${escH(acc.name)}')"/>`,
-'Rename',()=>{const n=(document.getElementById('era-new').value||'').trim();if(!n){showToast('Enter a name');return;}D.accounts=D.accounts.map(a=>a.id===id?{...a,name:n}:a);saveState();closeModal();const v={};document.querySelectorAll('.ei').forEach(i=>v[i.dataset.id]=parseFloat(i.value)||0);buildEntry(v);showToast('Renamed ✓');});
-setTimeout(()=>{const el=document.getElementById('era-old');if(el)el.textContent=acc.name;const inp=document.getElementById('era-new');if(inp){inp.value=acc.name;inp.select();inp.focus();}},40);}
+
+function entryRenameCategory(ci){
+  const cats=[...new Set(D.accounts.filter(a=>a.type==='asset').map(a=>a.category))],cat=cats[ci];if(!cat)return;
+  openModal(`<div id="rename-modal-title" style="font-family:'Syne',sans-serif;font-size:17px;font-weight:800;margin-bottom:16px;color:var(--text)">Rename Category</div>
+    <div class="lbl">Current name</div>
+    <div style="padding:10px 14px;background:var(--s2);border-radius:10px;font-weight:600;margin-bottom:14px" id="erc-old"></div>
+    <div class="lbl">New name</div>
+    <input class="inp" id="erc-new" oninput="markRenameDirty('${escH(cat)}')"/>`,
+  'Rename',()=>{
+    const n=(document.getElementById('erc-new').value||'').trim();if(!n){showToast('Enter a name');return;}
+    D.accounts=D.accounts.map(a=>a.category===cat?{...a,category:n}:a);saveState();closeModal();
+    const v={};document.querySelectorAll('.ei').forEach(i=>v[i.dataset.id]=parseFloat(i.value)||0);buildEntry(v);
+  });
+  setTimeout(()=>{const el=document.getElementById('erc-old');if(el)el.textContent=cat;const inp=document.getElementById('erc-new');if(inp){inp.value=cat;inp.select();inp.focus();}},40);
+}
+
+function entryRenameAccount(id){
+  const acc=D.accounts.find(a=>a.id===id);if(!acc)return;
+  const ccyOpts=['SGD','USD','EUR','GBP','AUD','JPY','HKD','MYR','CNY','THB'].map(c=>`<option value="${c}"${c===acc.ccy?' selected':''}>${c}</option>`).join('');
+  openModal(`<div id="rename-modal-title" style="font-family:'Syne',sans-serif;font-size:17px;font-weight:800;margin-bottom:16px;color:var(--text)">Edit Account</div>
+    <div style="margin-bottom:12px"><div class="lbl">Account Name</div><input class="inp" id="era-new" oninput="markRenameDirty('${escH(acc.name)}')"/></div>
+    <div><div class="lbl">Currency</div>
+    <select class="inp" id="era-ccy">${ccyOpts}</select></div>`,
+  'Save',()=>{
+    const n=(document.getElementById('era-new').value||'').trim();
+    const ccy=document.getElementById('era-ccy').value;
+    if(!n){showToast('Enter a name');return;}
+    D.accounts=D.accounts.map(a=>a.id===id?{...a,name:n,ccy}:a);saveState();closeModal();
+    const v={};document.querySelectorAll('.ei').forEach(i=>v[i.dataset.id]=parseFloat(i.value)||0);buildEntry(v);
+  });
+  setTimeout(()=>{const inp=document.getElementById('era-new');if(inp){inp.value=acc.name;inp.select();inp.focus();}},40);
+}
 function entryAddAccount(ci){const cats=[...new Set(D.accounts.filter(a=>a.type==='asset').map(a=>a.category))],precat=cats[ci]||'';const allCats=getAllCats(),catOpts=allCats.map(c=>`<option value="${escH(c)}">${escH(c)}</option>`).join(''),ccyOpts=['SGD','USD','EUR','GBP','AUD','JPY','HKD','MYR','CNY','THB'].map(c=>`<option>${c}</option>`).join('');
 openModal(`<div style="font-family:'Syne',sans-serif;font-size:17px;font-weight:800;margin-bottom:16px">Add Account</div><div style="margin-bottom:12px"><div class="lbl">Account Name</div><input class="inp" id="eaa-name" placeholder="e.g. Manulife Fund"/></div><div style="margin-bottom:12px"><div class="lbl">Category</div><select class="inp" id="eaa-cat"><option value="">— choose —</option>${catOpts}<option value="__new__">➕ New category…</option></select><input class="inp" id="eaa-catnew" placeholder="New category name" style="margin-top:8px;display:none"/></div><div><div class="lbl">Currency</div><select class="inp" id="eaa-ccy">${ccyOpts}</select></div>`,
 'Add Account',()=>{const name=(document.getElementById('eaa-name').value||'').trim(),sel=document.getElementById('eaa-cat'),cat=sel.value==='__new__'||sel.value===''?(document.getElementById('eaa-catnew').value||'').trim():sel.value,ccy=document.getElementById('eaa-ccy').value;if(!name){showToast('Enter account name');return;}if(!cat){showToast('Choose a category');return;}D.accounts.push({id:'a'+Date.now(),name,type:'asset',category:cat,sub:'custom',ccy});saveState();closeModal();const v={};document.querySelectorAll('.ei').forEach(i=>v[i.dataset.id]=parseFloat(i.value)||0);buildEntry(v);showToast('Added ✓');});
@@ -770,20 +802,155 @@ function renderHistory(){
 
 // ── SETTINGS ──
 function renderSettings(){renderAccList();}
+
+// Swipe state
+let _swipeEl=null,_swipeStartX=0,_swipeAcc=null;
+
 function renderAccList(){
-  const cats=getAllCats(),ccyList=['SGD','USD','EUR','GBP','AUD','JPY','HKD','MYR','CNY','THB'];
+  const cats=getAllCats();
+  const ccyList=['SGD','USD','EUR','GBP','AUD','JPY','HKD','MYR','CNY','THB'];
   let html='';
   cats.forEach((cat,ci)=>{
-    html+=`<div style="display:flex;align-items:center;justify-content:space-between;padding:10px 0 6px;border-bottom:2px solid var(--border2);margin-top:8px"><span style="font-size:11px;font-weight:800;letter-spacing:.06em;text-transform:uppercase">${escH(cat)}</span><div style="display:flex;gap:5px"><button class="bsm" style="font-size:11px;padding:4px 10px" data-ci="${ci}">✏ Rename</button><button class="btn-inline" data-ai="${ci}">+ Add</button></div></div>`;
-    D.accounts.filter(a=>a.category===cat).forEach(a=>{const cpf=a.sub==='cpf',srs=a.sub==='srs';const ccyOpts=ccyList.map(c=>`<option value="${c}">${c}</option>`).join('');
-    html+=`<div id="ar-${a.id}" style="border-bottom:1px solid var(--border)"><div style="display:flex;justify-content:space-between;align-items:center;padding:9px 0"><div style="min-width:0;flex:1"><span id="adn-${a.id}" style="font-size:13px;font-weight:600"></span><span class="fxb">${escH(a.ccy)}</span>${cpf?'<span class="tag tc" style="margin-left:4px;font-size:9px">CPF</span>':''}${srs?'<span class="tag ts" style="margin-left:4px;font-size:9px">SRS</span>':''}</div><div style="display:flex;gap:5px;align-items:center;flex-shrink:0"><span class="${a.type==='asset'?'tag ta':'tag tl'}">${a.type==='asset'?'Asset':'Liab'}</span><button class="bsm" style="padding:4px 9px;font-size:12px" data-edit="${a.id}">✏</button>${!cpf&&!srs?`<button class="bdg" style="padding:4px 9px;font-size:12px" data-del="${a.id}">✕</button>`:''}</div></div><div class="acc-edit-row" id="ae-${a.id}"><div><div class="lbl">Account Name</div><input class="inp" id="aen-${a.id}"/></div><div><div class="lbl">Category</div><select class="inp" id="aecat-${a.id}">${cats.map(c=>`<option value="${escH(c)}">${escH(c)}</option>`).join('')}<option value="__new__">➕ New…</option></select><input class="inp" id="aecat-new-${a.id}" placeholder="New category" style="margin-top:6px;display:none"/></div><div style="display:grid;grid-template-columns:1fr 1fr;gap:8px"><div><div class="lbl">Currency</div><select class="inp" id="aeccy-${a.id}">${ccyOpts}</select></div><div><div class="lbl">Type</div><select class="inp" id="aetyp-${a.id}"><option value="asset">Asset</option><option value="liability">Liability</option></select></div></div><div style="display:flex;gap:8px;margin-top:4px"><button class="btn" style="flex:1;padding:12px;font-size:14px" data-save="${a.id}">Save</button><button class="bsm" style="padding:12px 18px" data-cancel="${a.id}">Cancel</button></div></div></div>`;});
+    // Count accounts in this category
+    const catAccs=D.accounts.filter(a=>a.category===cat);
+    html+=`<div class="sw-row" data-cat="${escH(cat)}">
+      <div class="sw-content" style="display:flex;align-items:center;justify-content:space-between;padding:10px 0 6px;border-bottom:2px solid var(--border2);margin-top:8px">
+        <span style="font-size:11px;font-weight:800;letter-spacing:.06em;text-transform:uppercase">${escH(cat)}</span>
+        <div style="display:flex;gap:5px">
+          <button class="bsm" style="font-size:11px;padding:4px 10px" data-ci="${ci}">✏ Rename</button>
+          <button class="btn-inline" data-ai="${ci}">+ Add</button>
+          <button class="bdg" style="font-size:11px;padding:4px 8px" data-delcat="${escH(cat)}">🗑</button>
+        </div>
+      </div>
+    </div>`;
+    catAccs.forEach(a=>{
+      const cpf=a.sub==='cpf',srs=a.sub==='srs';
+      const ccyOpts=ccyList.map(c=>`<option value="${c}"${c===a.ccy?' selected':''}>${c}</option>`).join('');
+      html+=`<div class="sw-row" id="ar-${a.id}">
+        <div class="sw-content" style="border-bottom:1px solid var(--border)">
+          <div style="display:flex;justify-content:space-between;align-items:center;padding:10px 0">
+            <div style="min-width:0;flex:1">
+              <span style="font-size:13px;font-weight:600">${escH(a.name)}</span>
+              <span class="fxb">${escH(a.ccy)}</span>
+              ${cpf?'<span class="tag tc" style="margin-left:4px;font-size:9px">CPF</span>':''}
+              ${srs?'<span class="tag ts" style="margin-left:4px;font-size:9px">SRS</span>':''}
+            </div>
+            <div style="display:flex;gap:5px;align-items:center;flex-shrink:0">
+              <span class="${a.type==='asset'?'tag ta':'tag tl'}">${a.type==='asset'?'Asset':'Liab'}</span>
+              <button class="bsm" style="padding:4px 9px;font-size:12px" data-edit="${a.id}">✏ Edit</button>
+            </div>
+          </div>
+          <div class="acc-edit-row" id="ae-${a.id}">
+            <div><div class="lbl">Account Name</div><input class="inp" id="aen-${a.id}" value="${escH(a.name)}"/></div>
+            <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px">
+              <div><div class="lbl">Currency</div><select class="inp" id="aeccy-${a.id}">${ccyOpts}</select></div>
+              <div><div class="lbl">Type</div><select class="inp" id="aetyp-${a.id}"><option value="asset"${a.type==='asset'?' selected':''}>Asset</option><option value="liability"${a.type==='liability'?' selected':''}>Liability</option></select></div>
+            </div>
+            <div style="display:flex;gap:8px;margin-top:4px">
+              <button class="btn" style="flex:1;padding:12px;font-size:14px" data-save="${a.id}">Save</button>
+              <button class="bsm" style="padding:12px 18px" data-cancel="${a.id}">Cancel</button>
+            </div>
+          </div>
+        </div>
+        <div class="sw-actions">
+          <button class="sw-del" data-del="${a.id}">🗑<br/><span style="font-size:10px">Delete</span></button>
+        </div>
+      </div>`;
+    });
   });
-  const body=document.getElementById('acc-body');body.innerHTML=html;
-  D.accounts.forEach(a=>{const dn=document.getElementById('adn-'+a.id);if(dn)dn.textContent=a.name;const ni=document.getElementById('aen-'+a.id);if(ni)ni.value=a.name;const cs=document.getElementById('aecat-'+a.id);if(cs){const ex=[...cs.options].some(o=>o.value===a.category);if(ex)cs.value=a.category;else{cs.value='__new__';const cn=document.getElementById('aecat-new-'+a.id);if(cn){cn.style.display='block';cn.value=a.category;}}cs.onchange=()=>{const cn=document.getElementById('aecat-new-'+a.id);if(cn)cn.style.display=cs.value==='__new__'?'block':'none';};}const cy=document.getElementById('aeccy-'+a.id);if(cy)cy.value=a.ccy;const ty=document.getElementById('aetyp-'+a.id);if(ty)ty.value=a.type;});
-  body.onclick=e=>{const t=e.target;const rn=t.closest('[data-ci]');if(rn){openRenameCat(parseInt(rn.dataset.ci));return;}const ai=t.closest('[data-ai]');if(ai){openAddAccount(parseInt(ai.dataset.ai));return;}const ed=t.closest('[data-edit]');if(ed){toggleAccEdit(ed.dataset.edit);return;}const dl=t.closest('[data-del]');if(dl){delAccConfirm(dl.dataset.del);return;}const sv=t.closest('[data-save]');if(sv){saveAccEdit(sv.dataset.save);return;}const cn=t.closest('[data-cancel]');if(cn){toggleAccEdit(cn.dataset.cancel);return;}};
+
+  const body=document.getElementById('acc-body');
+  body.innerHTML=html;
+
+  // Event delegation
+  body.onclick=e=>{
+    const t=e.target;
+    if(t.closest('[data-ci]'))  { openRenameCat(parseInt(t.closest('[data-ci]').dataset.ci));return;}
+    if(t.closest('[data-ai]'))  { openAddAccount(parseInt(t.closest('[data-ai]').dataset.ai));return;}
+    if(t.closest('[data-delcat]')){ delCatConfirm(t.closest('[data-delcat]').dataset.delcat);return;}
+    if(t.closest('[data-edit]')){ toggleAccEdit(t.closest('[data-edit]').dataset.edit);return;}
+    if(t.closest('[data-save]')){ saveAccEdit(t.closest('[data-save]').dataset.save);return;}
+    if(t.closest('[data-cancel]')){ toggleAccEdit(t.closest('[data-cancel]').dataset.cancel);return;}
+    if(t.closest('[data-del]')) { delAccConfirm(t.closest('[data-del]').dataset.del);return;}
+  };
+
+  // Attach swipe-to-delete on each sw-row
+  body.querySelectorAll('.sw-row').forEach(row=>{
+    let startX=0,startY=0,swiping=false;
+    const content=row.querySelector('.sw-content');
+    const actions=row.querySelector('.sw-actions');
+    if(!content||!actions)return;
+
+    function onStart(e){
+      const x=e.touches?e.touches[0].clientX:e.clientX;
+      const y=e.touches?e.touches[0].clientY:e.clientY;
+      startX=x;startY=y;swiping=false;
+    }
+    function onMove(e){
+      const x=e.touches?e.touches[0].clientX:e.clientX;
+      const y=e.touches?e.touches[0].clientY:e.clientY;
+      const dx=x-startX,dy=y-startY;
+      if(!swiping&&Math.abs(dx)<5&&Math.abs(dy)<5)return;
+      swiping=true;
+      if(Math.abs(dy)>Math.abs(dx))return; // vertical scroll
+      e.preventDefault();
+      const tx=Math.max(-80,Math.min(0,dx));
+      content.style.transform=`translateX(${tx}px)`;
+    }
+    function onEnd(e){
+      if(!swiping)return;
+      const x=e.changedTouches?e.changedTouches[0].clientX:e.clientX;
+      const dx=x-startX;
+      if(dx<-40){
+        // snap open
+        content.style.transform='translateX(-80px)';
+        content.style.transition='transform .2s ease';
+        // close others
+        body.querySelectorAll('.sw-content').forEach(c=>{if(c!==content){c.style.transform='';c.style.transition='';}});
+      } else {
+        content.style.transform='';
+        content.style.transition='transform .2s ease';
+      }
+      swiping=false;
+    }
+
+    row.addEventListener('touchstart',onStart,{passive:true});
+    row.addEventListener('touchmove',onMove,{passive:false});
+    row.addEventListener('touchend',onEnd);
+  });
+
+  // Close swipe on tap elsewhere
+  body.addEventListener('click',e=>{
+    if(!e.target.closest('.sw-actions')){
+      body.querySelectorAll('.sw-content').forEach(c=>{c.style.transform='';c.style.transition='transform .2s ease';});
+    }
+  },{capture:true});
+}
+
+function delCatConfirm(cat){
+  const accs=D.accounts.filter(a=>a.category===cat);
+  openModal(
+    `<div style="font-family:'Syne',sans-serif;font-size:17px;font-weight:800;margin-bottom:8px">Delete Category?</div>
+    <div style="font-size:13px;color:var(--sub);line-height:1.7">Delete <b>${escH(cat)}</b> and all <b>${accs.length}</b> account${accs.length!==1?'s':''} inside it?<br/>All recorded values will also be removed. Cannot be undone.</div>`,
+    '🗑 Delete All',
+    ()=>{
+      const ids=accs.map(a=>a.id);
+      D.accounts=D.accounts.filter(a=>a.category!==cat);
+      D.months=D.months.map(m=>{const v={...m.values};ids.forEach(id=>delete v[id]);return{...m,values:v};});
+      saveState();closeModal();renderAccList();renderDash();showToast('Category deleted');
+    }
+  );
+  setTimeout(()=>{const b=document.getElementById('mb-btn');if(b){b.style.background='var(--red)';b.style.color='#fff';}},30);
 }
 function toggleAccEdit(id){const r=document.getElementById('ae-'+id);if(!r)return;const op=!r.classList.contains('open');document.querySelectorAll('.acc-edit-row.open').forEach(x=>x.classList.remove('open'));if(op)r.classList.add('open');}
-function saveAccEdit(id){const n=(document.getElementById('aen-'+id)||{}).value||'';const cs=document.getElementById('aecat-'+id);const cn=(document.getElementById('aecat-new-'+id)||{}).value||'';const cat=cs&&cs.value==='__new__'?cn.trim():cs?cs.value:'';const ccy=(document.getElementById('aeccy-'+id)||{}).value||'SGD';const type=(document.getElementById('aetyp-'+id)||{}).value||'asset';if(!n.trim()){showToast('Name cannot be empty');return;}if(!cat){showToast('Choose a category');return;}D.accounts=D.accounts.map(a=>a.id===id?{...a,name:n.trim(),category:cat,ccy,type}:a);saveState();renderAccList();renderDash();showToast('Updated ✓');}
+function saveAccEdit(id){
+  const n=(document.getElementById('aen-'+id)||{}).value||'';
+  const ccy=(document.getElementById('aeccy-'+id)||{}).value||'SGD';
+  const type=(document.getElementById('aetyp-'+id)||{}).value||'asset';
+  if(!n.trim()){showToast('Name cannot be empty');return;}
+  D.accounts=D.accounts.map(a=>a.id===id?{...a,name:n.trim(),ccy,type}:a);
+  saveState();renderAccList();renderDash();showToast('Updated ✓');
+}
 function delAccConfirm(id){const acc=D.accounts.find(a=>a.id===id);if(!acc)return;openModal(`<div style="font-family:'Syne',sans-serif;font-size:17px;font-weight:800;margin-bottom:8px">Delete Account?</div><div style="font-size:13px;color:var(--sub);line-height:1.6">Delete <b>${escH(acc.name)}</b>? All recorded values will also be removed.</div>`,
 '🗑 Delete',()=>{D.accounts=D.accounts.filter(a=>a.id!==id);D.months=D.months.map(m=>{const v={...m.values};delete v[id];return{...m,values:v};});saveState();closeModal();renderAccList();renderDash();});setTimeout(()=>{const b=document.getElementById('mb-btn');if(b){b.style.background='var(--red)';b.style.color='#fff';}},30);}
 function openRenameCat(ci){const cats=getAllCats(),cat=cats[ci]||'';openModal(`<div style="font-family:'Syne',sans-serif;font-size:17px;font-weight:800;margin-bottom:16px">Rename Category</div><div class="lbl">Current</div><div style="padding:10px 14px;background:var(--s2);border-radius:10px;font-weight:600;margin-bottom:14px" id="old-cat-lbl"></div><div class="lbl">New name</div><input class="inp" id="new-cat-name"/>`,
