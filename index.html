@@ -32,6 +32,7 @@ html,body{height:100%;background:var(--bg);color:var(--text);font-family:'DM San
 button,input,select,label,a{touch-action:manipulation;}
 #app{max-width:480px;margin:0 auto;padding-bottom:130px;}
 .view{display:none;}.view.active{display:block;animation:fadeUp .18s ease both;}
+@keyframes shake{0%,100%{transform:translateX(0)}20%,60%{transform:translateX(-8px)}40%,80%{transform:translateX(8px)}}
 @keyframes fadeUp{from{opacity:0;transform:translateY(6px)}to{opacity:1;transform:none}}
 .card{background:var(--s1);border:1px solid var(--border);border-radius:20px;padding:18px;margin:0 14px 10px;box-shadow:0 1px 4px rgba(0,0,0,.04);}
 .card2{background:var(--s2);border:1px solid var(--border);border-radius:14px;padding:13px 15px;margin:0 14px 8px;}
@@ -316,6 +317,38 @@ select.inp{appearance:none;-webkit-appearance:none;background-image:url("data:im
     <div style="font-size:12px;color:#5b21b6;line-height:1.65"><b>iPhone (Safari):</b> Tap Share (□↑) → "Add to Home Screen"<br/><b>Android (Chrome):</b> Tap ⋮ → "Add to Home screen"</div>
   </div>
   <div style="height:8px"></div>
+</div>
+
+<!-- LOCK SCREEN -->
+<div id="v-lock" style="display:none;position:fixed;inset:0;background:linear-gradient(160deg,#0f172a,#1e3a8a);z-index:60000;overflow-y:auto;-webkit-overflow-scrolling:touch;">
+  <div style="min-height:100%;display:flex;align-items:center;justify-content:center;padding:40px 28px;">
+    <div style="width:100%;max-width:360px;">
+      <div style="text-align:center;margin-bottom:40px">
+        <div style="font-size:56px;margin-bottom:16px">🔒</div>
+        <div style="font-family:'DM Sans',sans-serif;font-size:28px;font-weight:800;color:#fff;letter-spacing:-.3px;">NetWorth <span style="color:#93c5fd">SG</span></div>
+        <div style="color:rgba(255,255,255,.55);font-size:13px;margin-top:8px">Enter your access password to continue</div>
+      </div>
+      <div style="margin-bottom:14px;position:relative">
+        <input id="lock-input" type="password"
+          placeholder="Password"
+          style="width:100%;background:rgba(255,255,255,.1);border:1.5px solid rgba(255,255,255,.2);border-radius:14px;color:#fff;font-size:17px;padding:15px 50px 15px 18px;outline:none;font-family:'DM Sans',sans-serif;letter-spacing:.05em;"
+          onkeydown="if(event.key==='Enter')checkLock()"/>
+        <button onclick="toggleLockPw()" id="lock-eye"
+          style="position:absolute;right:14px;top:50%;transform:translateY(-50%);background:none;border:none;color:rgba(255,255,255,.5);font-size:18px;cursor:pointer;padding:4px;">👁</button>
+      </div>
+      <div id="lock-error" style="display:none;text-align:center;color:#fca5a5;font-size:13px;font-weight:600;margin-bottom:12px;animation:shake .4s ease;">
+        Incorrect password. Please try again.
+      </div>
+      <button onclick="checkLock()"
+        style="width:100%;background:#fff;color:#1e3a8a;border:none;border-radius:14px;padding:16px;font-family:'DM Sans',sans-serif;font-size:16px;font-weight:800;cursor:pointer;letter-spacing:-.2px;transition:transform .1s,opacity .1s;"
+        onmousedown="this.style.transform='scale(.97)'" onmouseup="this.style.transform=''" ontouchstart="this.style.transform='scale(.97)'" ontouchend="this.style.transform=''">
+        Unlock →
+      </button>
+      <div style="text-align:center;margin-top:24px;font-size:11px;color:rgba(255,255,255,.3)">
+        Password provided after purchase
+      </div>
+    </div>
+  </div>
 </div>
 
 <!-- WELCOME SCREEN (first open only) -->
@@ -1138,6 +1171,56 @@ function mkZip(files){
   return cat([...parts,cdData,eocd]);
 }
 
+// ── LOCK SCREEN ──
+const LOCK_PW = 'TFGnetworth';   // ← CHANGE THIS to your chosen password
+const LOCK_KEY = 'nw-sg-unlocked';
+
+function checkLock(){
+  const inp=document.getElementById('lock-input');
+  const err=document.getElementById('lock-error');
+  if(!inp)return;
+  const val=inp.value.trim();
+  if(val===LOCK_PW){
+    // Correct — remember unlock, hide lock screen
+    try{localStorage.setItem(LOCK_KEY,'1');}catch(e){}
+    const lock=document.getElementById('v-lock');
+    lock.style.opacity='0';
+    lock.style.transition='opacity .4s ease';
+    setTimeout(()=>{lock.style.display='none';},400);
+    err.style.display='none';
+  } else {
+    // Wrong — shake and show error
+    err.style.display='block';
+    err.style.animation='none';
+    // Re-trigger animation
+    void err.offsetWidth;
+    err.style.animation='shake .4s ease';
+    inp.value='';
+    inp.focus();
+  }
+}
+
+function toggleLockPw(){
+  const inp=document.getElementById('lock-input');
+  if(!inp)return;
+  inp.type=inp.type==='password'?'text':'password';
+}
+
+function checkLockScreen(){
+  const unlocked=localStorage.getItem(LOCK_KEY);
+  if(!unlocked){
+    const lock=document.getElementById('v-lock');
+    if(lock){
+      lock.style.display='block';
+      // Auto-focus password field after a brief delay
+      setTimeout(()=>{
+        const inp=document.getElementById('lock-input');
+        if(inp)inp.focus();
+      },300);
+    }
+  }
+}
+
 function dismissWelcome(){
   document.getElementById('v-welcome').style.display='none';
   try{localStorage.setItem('nw-sg-welcomed','1');}catch(e){}
@@ -1157,6 +1240,7 @@ window.addEventListener('load',()=>{
   const t=document.getElementById('toast');
   if(t){t.textContent='';t.classList.remove('show');}
   populateYearSelect(new Date().getFullYear());
+  checkLockScreen();
   checkWelcome();
   renderDash();
   document.addEventListener('click',e=>{
