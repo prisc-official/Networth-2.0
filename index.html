@@ -8,6 +8,10 @@
 <meta name="apple-mobile-web-app-title" content="NetWorth SG"/>
 <meta name="mobile-web-app-capable" content="yes"/>
 <meta name="theme-color" content="#f5f7fa"/>
+<!-- Force no caching — always load latest version from GitHub -->
+<meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate"/>
+<meta http-equiv="Pragma" content="no-cache"/>
+<meta http-equiv="Expires" content="0"/>
 <title>NetWorth SG</title>
 <link href="https://fonts.googleapis.com/css2?family=Syne:wght@700;800&family=DM+Sans:wght@400;500;600&display=swap" rel="stylesheet"/>
 <style>
@@ -444,6 +448,11 @@ function closeModal(){document.getElementById('mo').style.display='none';documen
 const VIEWS=['v-dash','v-entry','v-retire','v-history','v-settings'];
 const NAVMAP={'v-dash':'n-dash','v-entry':'n-entry','v-retire':'n-retire','v-history':'n-history','v-settings':'n-settings'};
 function showView(id){
+  // Always clear any lingering toast when navigating
+  clearTimeout(_tt);
+  const t=document.getElementById('toast');
+  if(t) t.classList.remove('show');
+
   if(document.getElementById('v-entry').classList.contains('active')&&id!=='v-entry')saveDraft();
   VIEWS.forEach(v=>document.getElementById(v).classList.toggle('active',v===id));
   Object.values(NAVMAP).forEach(n=>document.getElementById(n).classList.remove('active'));
@@ -665,8 +674,13 @@ function saveEntry(){
   else{D.months.push({id:'m'+Date.now(),label,values:vals,fxRates});}
   saveState();clearDraft();
   const btn=document.getElementById('save-entry-btn');
-  if(btn){btn.textContent='✓ Saved!';btn.style.background='var(--green)';btn.disabled=true;setTimeout(()=>{showView('v-dash');renderDash();setTimeout(()=>{btn.textContent='💾 Save Entry';btn.style.background='';btn.disabled=false;},400);},700);}
-  else{showView('v-dash');renderDash();}
+  if(btn){
+    btn.textContent='✓ Saved!';btn.style.background='var(--green)';btn.disabled=true;
+    setTimeout(()=>{
+      showView('v-dash');renderDash();
+      setTimeout(()=>{btn.textContent='💾 Save Entry';btn.style.background='';btn.disabled=false;},400);
+    },700);
+  } else {showView('v-dash');renderDash();}
 }
 
 // ── ENTRY RENAME/ADD ──
