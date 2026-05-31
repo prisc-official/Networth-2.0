@@ -829,7 +829,7 @@ function entryDelAccount(id){
       D.accounts=D.accounts.filter(a=>a.id!==id);
       D.months=D.months.map(m=>{const v={...m.values};delete v[id];return{...m,values:v};});
       saveState();closeModal();
-      const v={};document.querySelectorAll('.ei').forEach(i=>v[i.dataset.id]=parseFloat(i.value)||0);
+      const v={};document.querySelectorAll('.ei').forEach(i=>v[i.dataset.id]=stripComma(i.value));
       buildEntry(v);
       showToast('Account deleted');
     }
@@ -908,7 +908,7 @@ function entryRenameCategory(ci){
   'Rename',()=>{
     const n=(document.getElementById('erc-new').value||'').trim();if(!n){showToast('Enter a name');return;}
     D.accounts=D.accounts.map(a=>a.category===cat?{...a,category:n}:a);saveState();closeModal();
-    const v={};document.querySelectorAll('.ei').forEach(i=>v[i.dataset.id]=parseFloat(i.value)||0);buildEntry(v);
+    const v={};document.querySelectorAll('.ei').forEach(i=>v[i.dataset.id]=stripComma(i.value));buildEntry(v);
   });
   setTimeout(()=>{const el=document.getElementById('erc-old');if(el)el.textContent=cat;const inp=document.getElementById('erc-new');if(inp){inp.value=cat;inp.select();inp.focus();}},40);
 }
@@ -925,17 +925,17 @@ function entryRenameAccount(id){
     const ccy=document.getElementById('era-ccy').value;
     if(!n){showToast('Enter a name');return;}
     D.accounts=D.accounts.map(a=>a.id===id?{...a,name:n,ccy}:a);saveState();closeModal();
-    const v={};document.querySelectorAll('.ei').forEach(i=>v[i.dataset.id]=parseFloat(i.value)||0);buildEntry(v);
+    const v={};document.querySelectorAll('.ei').forEach(i=>v[i.dataset.id]=stripComma(i.value));buildEntry(v);
   });
   setTimeout(()=>{const inp=document.getElementById('era-new');if(inp){inp.value=acc.name;inp.select();inp.focus();}},40);
 }
 function entryAddAccount(ci){const cats=[...new Set(D.accounts.filter(a=>a.type==='asset').map(a=>a.category))],precat=cats[ci]||'';const allCats=getAllCats(),catOpts=allCats.map(c=>`<option value="${escH(c)}">${escH(c)}</option>`).join(''),ccyOpts=['SGD','USD','EUR','GBP','AUD','JPY','HKD','MYR','CNY','THB'].map(c=>`<option>${c}</option>`).join('');
 openModal(`<div style="font-family:'DM Sans',sans-serif;font-size:17px;font-weight:800;margin-bottom:16px">Add Account</div><div style="margin-bottom:12px"><div class="lbl">Account Name</div><input class="inp" id="eaa-name" placeholder="e.g. Manulife Fund"/></div><div style="margin-bottom:12px"><div class="lbl">Category</div><select class="inp" id="eaa-cat"><option value="">— choose —</option>${catOpts}<option value="__new__">➕ New category…</option></select><input class="inp" id="eaa-catnew" placeholder="New category name" style="margin-top:8px;display:none"/></div><div><div class="lbl">Currency</div><select class="inp" id="eaa-ccy">${ccyOpts}</select></div>`,
-'Add Account',()=>{const name=(document.getElementById('eaa-name').value||'').trim(),sel=document.getElementById('eaa-cat'),cat=sel.value==='__new__'||sel.value===''?(document.getElementById('eaa-catnew').value||'').trim():sel.value,ccy=document.getElementById('eaa-ccy').value;if(!name){showToast('Enter account name');return;}if(!cat){showToast('Choose a category');return;}D.accounts.push({id:'a'+Date.now(),name,type:'asset',category:cat,sub:'custom',ccy});saveState();closeModal();const v={};document.querySelectorAll('.ei').forEach(i=>v[i.dataset.id]=parseFloat(i.value)||0);buildEntry(v);showToast('Added ✓');});
+'Add Account',()=>{const name=(document.getElementById('eaa-name').value||'').trim(),sel=document.getElementById('eaa-cat'),cat=sel.value==='__new__'||sel.value===''?(document.getElementById('eaa-catnew').value||'').trim():sel.value,ccy=document.getElementById('eaa-ccy').value;if(!name){showToast('Enter account name');return;}if(!cat){showToast('Choose a category');return;}D.accounts.push({id:'a'+Date.now(),name,type:'asset',category:cat,sub:'custom',ccy});saveState();closeModal();const v={};document.querySelectorAll('.ei').forEach(i=>v[i.dataset.id]=stripComma(i.value));buildEntry(v);showToast('Added ✓');});
 setTimeout(()=>{const sel=document.getElementById('eaa-cat');if(sel&&precat&&[...sel.options].some(o=>o.value===precat))sel.value=precat;if(sel)sel.onchange=()=>{const ni=document.getElementById('eaa-catnew');if(ni)ni.style.display=sel.value==='__new__'?'block':'none';};const ni=document.getElementById('eaa-name');if(ni)ni.focus();},40);}
 function entryAddLiability(){const libCats=[...new Set(D.accounts.filter(a=>a.type==='liability').map(a=>a.category))],catOpts=libCats.map(c=>`<option value="${escH(c)}">${escH(c)}</option>`).join(''),ccyOpts=['SGD','USD','EUR','GBP','AUD','JPY','HKD','MYR','CNY','THB'].map(c=>`<option>${c}</option>`).join('');
 openModal(`<div style="font-family:'DM Sans',sans-serif;font-size:17px;font-weight:800;margin-bottom:16px">Add Liability</div><div style="margin-bottom:12px"><div class="lbl">Account Name</div><input class="inp" id="eal-name" placeholder="e.g. Personal Loan"/></div><div style="margin-bottom:12px"><div class="lbl">Category</div><select class="inp" id="eal-cat"><option value="">— choose —</option>${catOpts}<option value="__new__">➕ New category…</option></select><input class="inp" id="eal-catnew" placeholder="New category name" style="margin-top:8px;display:none"/></div><div><div class="lbl">Currency</div><select class="inp" id="eal-ccy">${ccyOpts}</select></div>`,
-'Add Liability',()=>{const name=(document.getElementById('eal-name').value||'').trim(),sel=document.getElementById('eal-cat'),cat=sel.value==='__new__'||sel.value===''?(document.getElementById('eal-catnew').value||'').trim():sel.value,ccy=document.getElementById('eal-ccy').value;if(!name){showToast('Enter account name');return;}if(!cat){showToast('Choose a category');return;}D.accounts.push({id:'a'+Date.now(),name,type:'liability',category:cat,sub:'custom',ccy});saveState();closeModal();const v={};document.querySelectorAll('.ei').forEach(i=>v[i.dataset.id]=parseFloat(i.value)||0);buildEntry(v);showToast('Added ✓');});
+'Add Liability',()=>{const name=(document.getElementById('eal-name').value||'').trim(),sel=document.getElementById('eal-cat'),cat=sel.value==='__new__'||sel.value===''?(document.getElementById('eal-catnew').value||'').trim():sel.value,ccy=document.getElementById('eal-ccy').value;if(!name){showToast('Enter account name');return;}if(!cat){showToast('Choose a category');return;}D.accounts.push({id:'a'+Date.now(),name,type:'liability',category:cat,sub:'custom',ccy});saveState();closeModal();const v={};document.querySelectorAll('.ei').forEach(i=>v[i.dataset.id]=stripComma(i.value));buildEntry(v);showToast('Added ✓');});
 setTimeout(()=>{const sel=document.getElementById('eal-cat');if(sel)sel.onchange=()=>{const ni=document.getElementById('eal-catnew');if(ni)ni.style.display=sel.value==='__new__'?'block':'none';};const ni=document.getElementById('eal-name');if(ni)ni.focus();},40);}
 
 // ── DRAG REORDER ──
