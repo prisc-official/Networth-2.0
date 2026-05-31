@@ -207,7 +207,13 @@ select.inp{appearance:none;-webkit-appearance:none;background-image:url("data:im
     </div>
   </div>
   <div class="card" style="margin:0 14px 10px">
-    <div class="rb" style="margin-bottom:8px"><div class="lbl" style="margin:0">FX Rates this month</div><button class="bsm" style="font-size:11px" onclick="toggleFxPanel()">Edit ▾</button></div>
+    <div class="rb" style="margin-bottom:8px">
+      <div class="lbl" style="margin:0">FX Rates this month</div>
+      <div style="display:flex;gap:6px">
+        <button id="fx-refresh-btn" class="bsm" style="font-size:11px;color:var(--green);border-color:var(--green)" onclick="autoUpdateFX()">↻ Live FX</button>
+        <button class="bsm" style="font-size:11px" onclick="toggleFxPanel()">Edit ▾</button>
+      </div>
+    </div>
     <div id="e-fx-display" style="font-size:12px;color:var(--sub)"></div>
     <div id="e-fx-panel" style="display:none;margin-top:10px">
       <div style="font-size:12px;color:var(--sub);margin-bottom:8px">Set rates to SGD for this month only.</div>
@@ -490,10 +496,8 @@ function loadState(){
       if(!p.fxRates)p.fxRates=DFX;
       if(!p.retire)p.retire=DR;
       if(!p.goals)p.goals=DG;
-      if(!p.accounts)p.accounts=DA;
+      if(!p.accounts)p.accounts=JSON.parse(JSON.stringify(DA));
       if(!p.months)p.months=[];
-      // Migrate accounts — renames + adds new defaults
-      p.accounts=migrateAccounts(p.accounts);
       const ids=p.goals.map(g=>g.id);
       if(!ids.includes('goal-retire'))p.goals.push({id:'goal-retire',name:'Retirement Nest Egg',target:2000000,ccy:'SGD'});
       if(!ids.includes('goal-emergency'))p.goals.push({id:'goal-emergency',name:'Emergency Fund',target:24000,ccy:'SGD'});
@@ -510,8 +514,6 @@ function saveState(){
 }
 
 let D=loadState();
-// Persist any migrations immediately
-saveState();
 let _eid=null;
 let _entryFX={};
 let _draft={eid:null,vals:{},month:'',year:'',fx:{}};
@@ -715,6 +717,37 @@ function openBreakdownModal(type){
 }
 
 // ── FX ──
+// ── AUTO FX FETCH ──
+async function fetchLiveFX(){
+  try{
+    const res=await fetch('https://api.exchangerate-api.com/v4/latest/SGD');
+    if(!res.ok)return null;
+    const data=await res.json();
+    if(!data.rates)return null;
+    const needed=['USD','EUR','GBP','AUD','JPY','HKD','MYR','CNY'];
+    const result={};
+    needed.forEach(ccy=>{
+      if(data.rates[ccy]) result[ccy]=parseFloat((1/data.rates[ccy]).toFixed(4));
+    });
+    return result;
+  }catch(e){return null;}
+}
+
+async function autoUpdateFX(){
+  const btn=document.getElementById('fx-refresh-btn');
+  if(btn){btn.textContent='Fetching…';btn.disabled=true;}
+  const rates=await fetchLiveFX();
+  if(rates){
+    _entryFX={..._entryFX,...rates};
+    renderEntryFX();
+    if(btn){btn.textContent='✓ Updated';setTimeout(()=>{btn.textContent='↻ Live FX';btn.disabled=false;},2000);}
+    showToast('FX rates updated ✓');
+  } else {
+    if(btn){btn.textContent='↻ Live FX';btn.disabled=false;}
+    showToast('Could not fetch — using defaults');
+  }
+}
+
 function toggleFxPanel(){const p=document.getElementById('e-fx-panel');p.style.display=p.style.display==='none'?'block':'none';}
 function initEntryFX(m){_entryFX=m&&m.fxRates?{...m.fxRates}:{...D.fxRates};renderEntryFX();}
 function renderEntryFX(){const d=document.getElementById('e-fx-display'),r=document.getElementById('e-fx-rows');if(!d||!r)return;const p=Object.entries(_entryFX);d.textContent=p.length?p.map(([k,v])=>k+': '+v).join('  ·  '):'Using default rates';r.innerHTML=p.map(([ccy,rate])=>`<div style="display:flex;justify-content:space-between;align-items:center;padding:5px 0;border-bottom:1px solid var(--border)"><span style="font-size:13px;font-weight:600">${escH(ccy)} → SGD</span><div style="display:flex;gap:8px;align-items:center"><input class="inp" value="${rate}" type="number" inputmode="decimal" style="width:90px;font-size:13px;padding:6px 10px" onchange="updateEntryFxRate('${ccy}',this.value)"/><button class="bdg" style="padding:3px 8px;font-size:11px" onclick="removeEntryFx('${ccy}')">✕</button></div></div>`).join('');}
@@ -868,12 +901,12 @@ function saveEntry(){
 // ── Comma formatting for entry inputs ──
 function fmtComma(n){
   if(n===''||n==null)return'';
-  const num=parseFloat(String(n).replace(/,/g,''));
+  let num=parseFloat(String(n).replace(/,/g,''));
   if(isNaN(num)||num===0)return'';
-  // Use explicit formatting — never rely on locale for thousands separator
+  // Round to 2dp to avoid IEEE 754 floating point drift (e.g. 1000000 → 999999.99)
+  num=Math.round(num*100)/100;
   const parts=num.toFixed(2).split('.');
   parts[0]=parts[0].replace(/\B(?=(\d{3})+(?!\d))/g,',');
-  // Drop trailing .00 for whole numbers
   return parts[1]==='00'?parts[0]:parts.join('.');
 }
 function stripComma(s){
