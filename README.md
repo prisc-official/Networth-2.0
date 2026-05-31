@@ -1,6 +1,5 @@
-# Networth-2.0
-Welcome to #ThatFinancialGal web-app personal networth tracker :)
 # NetWorth SG 📊
+Welcome to #ThatFinancialGal web-app personal networth tracker :)
 
 Singapore-focused personal net worth tracker.
 Track CPF, SRS, investments, property and retirement in one place.
@@ -20,6 +19,3 @@ Track CPF, SRS, investments, property and retirement in one place.
 ## Data & Privacy
 All data is saved locally in your browser.
 Export a JSON backup monthly from Settings.
-
-## Support
-DM on Instagram: @yourhandle
