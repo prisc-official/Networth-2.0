@@ -316,6 +316,10 @@ select.inp{appearance:none;-webkit-appearance:none;background-image:url("data:im
     <div class="lbl" style="color:var(--violet);margin-bottom:6px">📱 Add to Home Screen</div>
     <div style="font-size:12px;color:#5b21b6;line-height:1.65"><b>iPhone (Safari):</b> Tap Share (□↑) → "Add to Home Screen"<br/><b>Android (Chrome):</b> Tap ⋮ → "Add to Home screen"</div>
   </div>
+  <div class="card">
+    <div class="lbl" style="margin-bottom:10px">App Guide</div>
+    <button class="bsm" style="width:100%;padding:12px;font-size:14px" onclick="localStorage.removeItem('nw-sg-toured');showTour()">▶ Replay Getting Started Tour</button>
+  </div>
   <div style="height:8px"></div>
 </div>
 
@@ -388,6 +392,29 @@ select.inp{appearance:none;-webkit-appearance:none;background-image:url("data:im
   </div>
 </div>
 
+<!-- ONBOARDING TOUR — interactive floating tooltips -->
+<div id="v-tour" style="display:none;position:fixed;inset:0;z-index:55000;pointer-events:none;">
+  <!-- Spotlight overlay - 4 pieces around the highlighted element -->
+  <div id="tour-overlay-t" style="position:absolute;left:0;right:0;top:0;background:rgba(0,0,0,.55);transition:all .3s;"></div>
+  <div id="tour-overlay-b" style="position:absolute;left:0;right:0;bottom:0;background:rgba(0,0,0,.55);transition:all .3s;"></div>
+  <div id="tour-overlay-l" style="position:absolute;background:rgba(0,0,0,.55);transition:all .3s;"></div>
+  <div id="tour-overlay-r" style="position:absolute;background:rgba(0,0,0,.55);transition:all .3s;"></div>
+  <!-- Tooltip card -->
+  <div id="tour-tip" style="position:absolute;left:14px;right:14px;max-width:452px;background:#fff;border-radius:18px;padding:20px 18px 16px;box-shadow:0 8px 32px rgba(0,0,0,.22);pointer-events:all;transition:top .3s ease,bottom .3s ease;">
+    <div style="display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:10px">
+      <div id="tour-step-label" style="font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.1em;color:var(--blue)"></div>
+      <button onclick="dismissTour()" style="background:none;border:none;color:var(--muted);font-size:18px;cursor:pointer;padding:0 0 0 8px;line-height:1;">✕</button>
+    </div>
+    <div id="tour-title" style="font-family:'DM Sans',sans-serif;font-size:17px;font-weight:800;color:var(--text);margin-bottom:6px;letter-spacing:-.2px;"></div>
+    <div id="tour-body" style="font-size:13px;color:var(--sub);line-height:1.75;margin-bottom:14px;"></div>
+    <!-- Dot indicators -->
+    <div style="display:flex;align-items:center;justify-content:space-between">
+      <div style="display:flex;gap:5px" id="tour-dots"></div>
+      <button id="tour-action-btn" style="background:var(--blue);color:#fff;border:none;border-radius:10px;padding:9px 18px;font-size:14px;font-weight:700;cursor:pointer;"></button>
+    </div>
+  </div>
+</div>
+
 </div><!-- #app -->
 <nav class="nav">
   <div class="nav-inner">
@@ -405,29 +432,66 @@ select.inp{appearance:none;-webkit-appearance:none;background-image:url("data:im
 'use strict';
 const SK='nw-sg-v6';
 const DA=[
+  // CPF
   {id:'cpf-oa',name:'CPF Ordinary (OA)',type:'asset',category:'CPF',sub:'cpf',ccy:'SGD'},
   {id:'cpf-sa',name:'CPF Special (SA)',type:'asset',category:'CPF',sub:'cpf',ccy:'SGD'},
   {id:'cpf-ma',name:'CPF MediSave (MA)',type:'asset',category:'CPF',sub:'cpf',ccy:'SGD'},
   {id:'cpf-ra',name:'CPF Retirement (RA)',type:'asset',category:'CPF',sub:'cpf',ccy:'SGD'},
+  // SRS
   {id:'srs',name:'SRS Account',type:'asset',category:'SRS',sub:'srs',ccy:'SGD'},
+  // Cash & Bank (A-Z)
   {id:'dbs',name:'DBS Savings',type:'asset',category:'Cash & Bank',sub:'bank',ccy:'SGD'},
-  {id:'uob',name:'UOB Savings',type:'asset',category:'Cash & Bank',sub:'bank',ccy:'SGD'},
+  {id:'gxs',name:'GXS FD',type:'asset',category:'Cash & Bank',sub:'bank',ccy:'SGD'},
+  {id:'mari',name:'Maribank FD',type:'asset',category:'Cash & Bank',sub:'bank',ccy:'SGD'},
   {id:'ocbc',name:'OCBC Savings',type:'asset',category:'Cash & Bank',sub:'bank',ccy:'SGD'},
-  {id:'sgx',name:'SGX Stocks',type:'asset',category:'Investments',sub:'inv',ccy:'SGD'},
-  {id:'etf',name:'ETFs (IBKR / Tiger)',type:'asset',category:'Investments',sub:'inv',ccy:'SGD'},
+  {id:'uob',name:'UOB Savings',type:'asset',category:'Cash & Bank',sub:'bank',ccy:'SGD'},
+  // Investments (A-Z)
   {id:'endowus',name:'Endowus',type:'asset',category:'Investments',sub:'inv',ccy:'SGD'},
+  {id:'us',name:'IBKR Securities (USD)',type:'asset',category:'Investments',sub:'inv',ccy:'USD'},
+  {id:'moomoo',name:'MooMoo',type:'asset',category:'Investments',sub:'inv',ccy:'SGD'},
+  {id:'sgb',name:'Singapore Savings Bond',type:'asset',category:'Investments',sub:'inv',ccy:'SGD'},
+  {id:'sgx',name:'SGX Securities',type:'asset',category:'Investments',sub:'inv',ccy:'SGD'},
   {id:'syfe',name:'Syfe',type:'asset',category:'Investments',sub:'inv',ccy:'SGD'},
-  {id:'us',name:'US Brokerage (USD)',type:'asset',category:'Investments',sub:'inv',ccy:'USD'},
+  {id:'tbills',name:'T-Bills',type:'asset',category:'Investments',sub:'inv',ccy:'SGD'},
+  // Property
   {id:'hdb',name:'HDB Flat',type:'asset',category:'Property',sub:'prop',ccy:'SGD'},
-  {id:'il',name:'Whole Life / ILP',type:'asset',category:'Insurance',sub:'ins',ccy:'SGD'},
-  {id:'ml',name:'HDB / Home Loan',type:'liability',category:'Mortgage',sub:'loan',ccy:'SGD'},
+  // Insurance
+  {id:'il',name:'Whole Life / Endowment / ILP',type:'asset',category:'Insurance',sub:'ins',ccy:'SGD'},
+  // Liabilities
+  {id:'ml',name:'Home Loan',type:'liability',category:'Mortgage',sub:'loan',ccy:'SGD'},
   {id:'car',name:'Car Loan',type:'liability',category:'Loans',sub:'loan',ccy:'SGD'},
-  {id:'cc',name:'Credit Cards',type:'liability',category:'Credit',sub:'credit',ccy:'SGD'},
   {id:'sl',name:'Study Loan',type:'liability',category:'Loans',sub:'loan',ccy:'SGD'},
+  {id:'cc1',name:'Credit Card 1',type:'liability',category:'Credit Cards',sub:'credit',ccy:'SGD'},
+  {id:'cc2',name:'Credit Card 2',type:'liability',category:'Credit Cards',sub:'credit',ccy:'SGD'},
+  {id:'cc3',name:'Credit Card 3',type:'liability',category:'Credit Cards',sub:'credit',ccy:'SGD'},
+  {id:'cc4',name:'Credit Card 4',type:'liability',category:'Credit Cards',sub:'credit',ccy:'SGD'},
 ];
 const DR={age:35,retireAge:55,lifeExp:85,returnPct:5,expenses:4000,inflation:2.5,savings:2500,cpfPayout:1200,expensesPre:0,incomePre:0,incomePost:0,savingsPost:0};
 const DG=[{id:'goal-retire',name:'Retirement Nest Egg',target:2000000,ccy:'SGD'},{id:'goal-emergency',name:'Emergency Fund',target:24000,ccy:'SGD'}];
 const DFX={USD:1.28,EUR:1.46,GBP:1.71,AUD:0.88,JPY:0.009,HKD:0.16,MYR:0.30,CNY:0.187};
+
+// ── Account migration — patches existing saved accounts to match DA updates ──
+function migrateAccounts(accounts){
+  // Map of id → latest name/ccy from DA
+  const daMap=Object.fromEntries(DA.map(a=>[a.id,a]));
+  // Step 1: rename existing accounts that have changed
+  const migrated=accounts.map(a=>{
+    const da=daMap[a.id];
+    if(da){
+      // Always sync name and category from DA (user can rename later)
+      return{...a, name:da.name, category:da.category};
+    }
+    return a;
+  });
+  // Step 2: add any DA accounts that don't exist yet
+  const existingIds=new Set(migrated.map(a=>a.id));
+  DA.forEach(da=>{
+    if(!existingIds.has(da.id)){
+      migrated.push({...da});
+    }
+  });
+  return migrated;
+}
 
 function loadState(){
   try{
@@ -439,6 +503,8 @@ function loadState(){
       if(!p.goals)p.goals=DG;
       if(!p.accounts)p.accounts=DA;
       if(!p.months)p.months=[];
+      // Migrate accounts — renames + adds new defaults
+      p.accounts=migrateAccounts(p.accounts);
       const ids=p.goals.map(g=>g.id);
       if(!ids.includes('goal-retire'))p.goals.push({id:'goal-retire',name:'Retirement Nest Egg',target:2000000,ccy:'SGD'});
       if(!ids.includes('goal-emergency'))p.goals.push({id:'goal-emergency',name:'Emergency Fund',target:24000,ccy:'SGD'});
@@ -455,6 +521,8 @@ function saveState(){
 }
 
 let D=loadState();
+// Persist any migrations immediately
+saveState();
 let _eid=null;
 let _entryFX={};
 let _draft={eid:null,vals:{},month:'',year:'',fx:{}};
@@ -625,7 +693,7 @@ function renderDash(){
   const ps=document.getElementById('pie-month-sel');if(ps){ps.innerHTML=D.months.map(m=>`<option value="${m.id}">${escH(m.label)}</option>`).join('');ps.value=lm.id;setTimeout(renderPie,60);}
   // Category breakdown
   const cA={},cL={};D.accounts.forEach(a=>{const v=toSGD(lm.values[a.id]||0,a.ccy);a.type==='asset'?cA[a.category]=(cA[a.category]||0)+v:cL[a.category]=(cL[a.category]||0)+v;});
-  let aH='';Object.entries(cA).sort((a,b)=>b[1]-a[1]).forEach(([cat,val])=>{const pct=l.assets?Math.round(val/l.assets*100):0;const ex=cat==='CPF'?'<span class="tag tc" style="font-size:9px;margin-left:4px">CPF</span>':cat==='SRS'?'<span class="tag ts" style="font-size:9px;margin-left:4px">SRS</span>':'';aH+=`<div style="margin-bottom:10px"><div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:3px"><span style="font-size:13px">${escH(cat)}${ex}</span><span style="font-size:13px;font-weight:700">${fS(val,true)} <span style="color:var(--sub);font-weight:400">(${pct}%)</span></span></div><div class="bar-t"><div class="bar-f" style="width:${pct}%;background:var(--green)"></div></div></div>`;});
+  let aH='';Object.entries(cA).sort((a,b)=>b[1]-a[1]).forEach(([cat,val])=>{const pct=l.assets?Math.round(val/l.assets*100):0;const ex=cat==='CPF'?'<span class="tag tc" style="font-size:9px;margin-left:4px">CPF</span>':'';aH+=`<div style="margin-bottom:10px"><div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:3px"><span style="font-size:13px">${escH(cat)}${ex}</span><span style="font-size:13px;font-weight:700">${fS(val,true)} <span style="color:var(--sub);font-weight:400">(${pct}%)</span></span></div><div class="bar-t"><div class="bar-f" style="width:${pct}%;background:var(--green)"></div></div></div>`;});
   document.getElementById('d-acat').innerHTML=aH||'<div style="color:var(--sub);font-size:13px">No assets.</div>';
   let lH='';Object.entries(cL).sort((a,b)=>b[1]-a[1]).forEach(([cat,val])=>{const pct=l.liabilities?Math.round(val/l.liabilities*100):0;lH+=`<div style="margin-bottom:10px"><div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:3px"><span style="font-size:13px">${escH(cat)}</span><span style="font-size:13px;font-weight:700">${fS(val,true)} <span style="color:var(--sub);font-weight:400">(${pct}%)</span></span></div><div class="bar-t"><div class="bar-f" style="width:${pct}%;background:var(--red)"></div></div></div>`;});
   document.getElementById('d-lcat').innerHTML=lH||'<div style="color:var(--sub);font-size:13px">No liabilities.</div>';
@@ -691,9 +759,16 @@ function openNewMonth(){
 }
 function openEditMonth(id){const m=D.months.find(x=>x.id===id);if(!m)return;_eid=id;document.getElementById('e-title').textContent='Edit '+m.label;document.getElementById('e-month-row').style.display='none';document.getElementById('e-fx-panel').style.display='none';clearDraft();initEntryFX(m);buildEntry(m.values);showView('v-entry');}
 function buildEntry(vals,restoreAfter=false){
-  const assets=D.accounts.filter(a=>a.type==='asset'),liabs=D.accounts.filter(a=>a.type==='liability');
-  const cats=[...new Set(assets.map(a=>a.category))];let html='';
+  const assets=D.accounts.filter(a=>a.type==='asset');
+  const liabs=D.accounts.filter(a=>a.type==='liability');
+  const cats=[...new Set(assets.map(a=>a.category))];
+  let html='';
   cats.forEach((cat,ci)=>{
+    // Sort accounts within category: CPF/SRS keep defined order, others alphabetical
+    const catAccs=assets.filter(a=>a.category===cat).sort((a,b)=>{
+      if(a.sub==='cpf'||a.sub==='srs') return 0; // preserve CPF/SRS order
+      return a.name.localeCompare(b.name);
+    });
     html+=`<div style="display:flex;align-items:center;justify-content:space-between;padding:10px 18px 4px">
       <span style="font-size:10px;font-weight:800;text-transform:uppercase;letter-spacing:.08em;color:var(--sub)">${escH(cat)}</span>
       <div style="display:flex;gap:6px">
@@ -701,8 +776,10 @@ function buildEntry(vals,restoreAfter=false){
         <button class="btn-inline" style="font-size:11px;padding:4px 10px" onclick="entryAddAccount(${ci})">+ Add</button>
       </div>
     </div>`;
-    assets.filter(a=>a.category===cat).forEach(a=>{
-      const badge=a.sub==='cpf'?'<span class="tag tc" style="font-size:9px">CPF</span>':a.sub==='srs'?'<span class="tag ts" style="font-size:9px">SRS</span>':'';
+    const insNote = cat==='Insurance' ? `<div style="margin:0 14px 6px;font-size:12px;color:var(--sub);padding:0 2px">💡 Enter the <b>surrender value</b> from your annual policy statement</div>` : '';
+    html+=insNote;
+    catAccs.forEach(a=>{
+      const badge=a.sub==='cpf'?'<span class="tag tc" style="font-size:9px">CPF</span>':'';
       const canDel=a.sub!=='cpf'&&a.sub!=='srs';
       html+=`<div class="card2 drag-item" draggable="true" data-acid="${a.id}" style="margin-bottom:8px">
         <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:7px">
@@ -722,11 +799,15 @@ function buildEntry(vals,restoreAfter=false){
       </div>`;
     });
   });
-  html+=`<div style="display:flex;align-items:center;justify-content:space-between;padding:10px 18px 4px">
-    <span style="font-size:10px;font-weight:800;text-transform:uppercase;letter-spacing:.08em;color:var(--sub)">Liabilities</span>
-    <button class="btn-inline" style="font-size:11px;padding:4px 10px" onclick="entryAddLiability()">+ Add</button>
-  </div>`;
-  liabs.forEach(a=>{
+  const liabCats=[...new Set(liabs.map(a=>a.category))];
+  liabCats.forEach(cat=>{
+    if(cat===liabCats[0]){
+      html+=`<div style="display:flex;align-items:center;justify-content:space-between;padding:10px 18px 4px">
+        <span style="font-size:10px;font-weight:800;text-transform:uppercase;letter-spacing:.08em;color:var(--sub)">Liabilities</span>
+        <button class="btn-inline" style="font-size:11px;padding:4px 10px" onclick="entryAddLiability()">+ Add</button>
+      </div>`;
+    }
+    liabs.filter(a=>a.category===cat).sort((a,b)=>a.name.localeCompare(b.name)).forEach(a=>{
     html+=`<div class="card2 drag-item" draggable="true" data-acid="${a.id}" style="margin-bottom:8px">
       <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:7px">
         <div style="display:flex;align-items:center;gap:6px">
@@ -743,7 +824,8 @@ function buildEntry(vals,restoreAfter=false){
         value="${vals[a.id]?fmtComma(vals[a.id]):''}"
         onfocus="onEiFocus(this)" onblur="onEiBlur(this)" oninput="onEiInput(this)"/>
     </div>`;
-  });
+    }); // end liabs.filter.forEach
+  }); // end liabCats.forEach
   const body=document.getElementById('e-body');body.innerHTML=html;attachDragReorder(body);
   if(restoreAfter)restoreDraft();else updPrev();
 }
@@ -1017,7 +1099,7 @@ function renderAccList(){
             <span style="font-size:13px;font-weight:600">${escH(a.name)}</span>
             <span class="fxb">${escH(a.ccy)}</span>
             ${cpf?'<span class="tag tc" style="margin-left:4px;font-size:9px">CPF</span>':''}
-            ${srs?'<span class="tag ts" style="margin-left:4px;font-size:9px">SRS</span>':''}
+            
           </div>
           <div style="display:flex;gap:5px;align-items:center;flex-shrink:0">
             <span class="${a.type==='asset'?'tag ta':'tag tl'}">${a.type==='asset'?'Asset':'Liab'}</span>
@@ -1221,16 +1303,156 @@ function checkLockScreen(){
   }
 }
 
+// ── ONBOARDING TOUR — interactive spotlight ──
+const TOUR_KEY='nw-sg-toured';
+let _tourStep=0;
+let _tourActive=false;
+
+// Each step: which nav element to spotlight, what to say, what the button does
+const TOUR_STEPS=[
+  {
+    step:'1 of 5',
+    target:'n-entry',          // spotlight this element
+    position:'above-nav',      // tooltip above the nav bar
+    title:'Add your first month',
+    body:'Tap <b>Add Month</b> below to enter your end-of-month balances. Start with your CPF, bank accounts and investments.',
+    btnLabel:'Tap Add Month →',
+    btnAction: ()=>{
+      dismissTour(false);      // hide tour temporarily
+      openNewMonth();
+      // Re-show tour on next step after a short delay
+      setTimeout(()=>advanceTour(1), 600);
+    }
+  },
+  {
+    step:'2 of 5',
+    target:'n-dash',
+    position:'above-nav',
+    title:'Check your Overview',
+    body:'After saving an entry, your <b>Overview</b> dashboard shows your net worth, charts, CPF breakdown and asset allocation — all calculated automatically.',
+    btnLabel:'Go to Overview →',
+    btnAction: ()=>{
+      dismissTour(false);
+      showView('v-dash');
+      setTimeout(()=>advanceTour(2), 400);
+    }
+  },
+  {
+    step:'3 of 5',
+    target:'n-retire',
+    position:'above-nav',
+    title:'Plan your retirement',
+    body:'The <b>Retire</b> tab calculates whether you can afford to retire based on your savings, expenses, CPF Life payout and investment returns.',
+    btnLabel:'Go to Retire →',
+    btnAction: ()=>{
+      dismissTour(false);
+      showView('v-retire');
+      setTimeout(()=>advanceTour(3), 400);
+    }
+  },
+  {
+    step:'4 of 5',
+    target:'n-settings',
+    position:'above-nav',
+    title:'Customise in Settings',
+    body:'Go to <b>Settings</b> to rename accounts, add new ones, delete ones you don\'t use, and change currencies. Make it match your actual financial accounts.',
+    btnLabel:'Go to Settings →',
+    btnAction: ()=>{
+      dismissTour(false);
+      showView('v-settings');
+      setTimeout(()=>advanceTour(4), 400);
+    }
+  },
+  {
+    step:'5 of 5',
+    target:'n-settings',
+    position:'above-nav',
+    title:'Back up your data',
+    body:'Your data lives on your device only. Go to <b>Settings → Export Backup (JSON)</b> monthly and save it to iCloud or Google Drive. If you lose the file, you lose your data.',
+    btnLabel:"Got it — let's go! 🚀",
+    btnAction: ()=>{
+      dismissTour(true);
+    }
+  },
+];
+
+function advanceTour(step){
+  _tourStep=step;
+  _tourActive=true;
+  renderTourStep(step);
+  document.getElementById('v-tour').style.display='block';
+}
+
+function renderTourStep(step){
+  const s=TOUR_STEPS[step];
+
+  // Spotlight the target nav item
+  const targetEl=document.getElementById(s.target);
+  const navEl=document.querySelector('.nav');
+
+  // Position tooltip above the nav bar
+  const navH=navEl?navEl.offsetHeight:80;
+  const tip=document.getElementById('tour-tip');
+  const safeB=parseInt(getComputedStyle(document.documentElement).getPropertyValue('--safe-b'))||0;
+
+  // Place tooltip just above the nav
+  tip.style.bottom=(navH+12)+'px';
+  tip.style.top='auto';
+
+  // Spotlight overlays — highlight the target nav item
+  if(targetEl){
+    const r=targetEl.getBoundingClientRect();
+    const pad=8;
+    document.getElementById('tour-overlay-t').style.cssText=`position:absolute;left:0;right:0;top:0;height:${r.top-pad}px;background:rgba(0,0,0,.55);`;
+    document.getElementById('tour-overlay-b').style.cssText=`position:absolute;left:0;right:0;bottom:0;top:${r.bottom+pad}px;background:rgba(0,0,0,.55);`;
+    document.getElementById('tour-overlay-l').style.cssText=`position:absolute;top:${r.top-pad}px;left:0;width:${r.left-pad}px;height:${r.height+pad*2}px;background:rgba(0,0,0,.55);`;
+    document.getElementById('tour-overlay-r').style.cssText=`position:absolute;top:${r.top-pad}px;left:${r.right+pad}px;right:0;height:${r.height+pad*2}px;background:rgba(0,0,0,.55);`;
+  }
+
+  // Step label, title, body
+  document.getElementById('tour-step-label').textContent=s.step;
+  document.getElementById('tour-title').innerHTML=s.title;
+  document.getElementById('tour-body').innerHTML=s.body;
+
+  // Dots
+  const dotsEl=document.getElementById('tour-dots');
+  dotsEl.innerHTML=TOUR_STEPS.map((_,i)=>`<div style="width:${i===step?'20px':'6px'};height:6px;border-radius:3px;background:${i===step?'var(--blue)':'var(--border2)'};transition:all .3s;"></div>`).join('');
+
+  // Action button
+  const btn=document.getElementById('tour-action-btn');
+  btn.textContent=s.btnLabel;
+  btn.onclick=s.btnAction;
+}
+
+function showTour(){
+  _tourStep=0;
+  _tourActive=true;
+  document.getElementById('v-tour').style.display='block';
+  renderTourStep(0);
+}
+
+function dismissTour(permanent=true){
+  document.getElementById('v-tour').style.display='none';
+  _tourActive=false;
+  if(permanent){
+    try{localStorage.setItem(TOUR_KEY,'1');}catch(e){}
+  }
+}
+
 function dismissWelcome(){
   document.getElementById('v-welcome').style.display='none';
   try{localStorage.setItem('nw-sg-welcomed','1');}catch(e){}
+  showTour();
 }
 
 function checkWelcome(){
-  // Show welcome screen only if never seen before AND no data yet
   const seen=localStorage.getItem('nw-sg-welcomed');
   if(!seen){
     document.getElementById('v-welcome').style.display='block';
+  } else {
+    // Welcome already dismissed — check if tour was seen
+    const toured=localStorage.getItem(TOUR_KEY);
+    if(!toured) showTour();
   }
 }
 
