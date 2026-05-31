@@ -89,8 +89,8 @@ select.inp{appearance:none;-webkit-appearance:none;background-image:url("data:im
 .ni{flex:1;display:flex;flex-direction:column;align-items:center;gap:3px;cursor:pointer;padding:4px 0;}
 .nic{font-size:18px;line-height:1;}.nil{font-size:9px;font-weight:700;color:var(--muted);letter-spacing:.03em;}
 .ni.active .nil{color:var(--blue);}
-#toast{position:fixed;top:calc(var(--safe-t)+16px);left:50%;transform:translateX(-50%) translateY(-80px);background:#111827;color:#fff;padding:10px 20px;border-radius:30px;font-weight:600;font-size:13px;z-index:99999;transition:transform .3s cubic-bezier(.34,1.56,.64,1);pointer-events:none;white-space:nowrap;}
-#toast.show{transform:translateX(-50%) translateY(0);}
+#toast{position:fixed;top:calc(var(--safe-t)+16px);left:50%;transform:translateX(-50%) translateY(-80px);background:#111827;color:#fff;padding:10px 20px;border-radius:30px;font-weight:600;font-size:13px;z-index:99999;transition:transform .3s cubic-bezier(.34,1.56,.64,1);pointer-events:none;white-space:nowrap;opacity:0;}
+#toast.show{transform:translateX(-50%) translateY(0);opacity:1;}
 #mo{display:none;position:fixed;inset:0;background:rgba(0,0,0,.55);z-index:10000;}
 #mb{display:none;position:fixed;left:0;right:0;bottom:0;background:#fff;border-radius:24px 24px 0 0;border:1px solid var(--border);z-index:10001;flex-direction:column;max-height:75dvh;max-height:75vh;box-shadow:0 -4px 32px rgba(0,0,0,.18);}
 #mb.open{display:flex;}
@@ -357,7 +357,7 @@ select.inp{appearance:none;-webkit-appearance:none;background-image:url("data:im
     <div class="ni" id="n-settings" onclick="showView('v-settings')"><div class="nic">⚙</div><div class="nil">Settings</div></div>
   </div>
 </nav>
-<div id="toast">Saved ✓</div>
+<div id="toast"></div>
 <div id="mo" onclick="closeModal()"></div>
 <div id="mb"><div id="mb-inner"></div><div id="mb-foot"><button class="btn" id="mb-btn">—</button></div></div>
 <script>
@@ -1031,6 +1031,9 @@ function checkWelcome(){
 
 // ── INIT ──
 window.addEventListener('load',()=>{
+  // Always start with clean toast state
+  const t=document.getElementById('toast');
+  if(t){t.textContent='';t.classList.remove('show');}
   populateYearSelect(new Date().getFullYear());
   checkWelcome();
   renderDash();
