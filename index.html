@@ -470,27 +470,16 @@ const DR={age:35,retireAge:55,lifeExp:85,returnPct:5,expenses:4000,inflation:2.5
 const DG=[{id:'goal-retire',name:'Retirement Nest Egg',target:2000000,ccy:'SGD'},{id:'goal-emergency',name:'Emergency Fund',target:24000,ccy:'SGD'}];
 const DFX={USD:1.28,EUR:1.46,GBP:1.71,AUD:0.88,JPY:0.009,HKD:0.16,MYR:0.30,CNY:0.187};
 
-// ── Account migration — patches existing saved accounts to match DA updates ──
+// ── Account migration — only ADDS new default accounts, never renames existing ones ──
 function migrateAccounts(accounts){
-  // Map of id → latest name/ccy from DA
-  const daMap=Object.fromEntries(DA.map(a=>[a.id,a]));
-  // Step 1: rename existing accounts that have changed
-  const migrated=accounts.map(a=>{
-    const da=daMap[a.id];
-    if(da){
-      // Always sync name and category from DA (user can rename later)
-      return{...a, name:da.name, category:da.category};
-    }
-    return a;
-  });
-  // Step 2: add any DA accounts that don't exist yet
-  const existingIds=new Set(migrated.map(a=>a.id));
+  const existingIds=new Set(accounts.map(a=>a.id));
+  // Only add accounts from DA that the user doesn't have yet
   DA.forEach(da=>{
     if(!existingIds.has(da.id)){
-      migrated.push({...da});
+      accounts.push({...da});
     }
   });
-  return migrated;
+  return accounts;
 }
 
 function loadState(){
@@ -878,19 +867,24 @@ function saveEntry(){
 
 // ── Comma formatting for entry inputs ──
 function fmtComma(n){
-  if(n===''||n==null||isNaN(n))return'';
+  if(n===''||n==null)return'';
   const num=parseFloat(String(n).replace(/,/g,''));
   if(isNaN(num)||num===0)return'';
-  return num.toLocaleString('en-SG',{maximumFractionDigits:2});
+  // Use explicit formatting — never rely on locale for thousands separator
+  const parts=num.toFixed(2).split('.');
+  parts[0]=parts[0].replace(/\B(?=(\d{3})+(?!\d))/g,',');
+  // Drop trailing .00 for whole numbers
+  return parts[1]==='00'?parts[0]:parts.join('.');
 }
 function stripComma(s){
-  return parseFloat(String(s||'').replace(/,/g,''))||0;
+  const cleaned=String(s||'').replace(/,/g,'');
+  const n=parseFloat(cleaned);
+  return isNaN(n)?0:n;
 }
 function onEiFocus(el){
-  // Strip commas when editing
   const raw=stripComma(el.value);
-  el.value=raw||'';
   el.type='number';
+  el.value=raw||'';
   el.select();
 }
 function onEiBlur(el){
