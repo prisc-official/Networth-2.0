@@ -700,8 +700,11 @@ function renderDash(){
   // NW variants
   const propIds=D.accounts.filter(a=>a.sub==='prop'||a.category==='Property').map(a=>a.id);
   const cpfIds=D.accounts.filter(a=>a.sub==='cpf').map(a=>a.id);
+  // Also exclude mortgage when excluding property (otherwise NW looks artificially low)
+  const mortgageIds=D.accounts.filter(a=>a.sub==='loan'&&(a.category==='Mortgage'||a.name.toLowerCase().includes('home'))).map(a=>a.id);
   const calcX=excl=>{let a=0,li=0;D.accounts.forEach(acc=>{if(excl.includes(acc.id))return;const v=toSGD(lm.values[acc.id]||0,acc.ccy);acc.type==='asset'?a+=v:li+=v;});return a-li;};
-  const nwNP=calcX(propIds),nwLQ=calcX([...propIds,...cpfIds]);
+  const nwNP=calcX([...propIds,...mortgageIds]);
+  const nwLQ=calcX([...propIds,...mortgageIds,...cpfIds]);
   document.getElementById('d-nw-total').textContent=fS(l.net);document.getElementById('d-nw-total').className=l.net>=0?'pos':'neg';
   document.getElementById('d-nw-noprop').textContent=fS(nwNP);document.getElementById('d-nw-noprop').className=nwNP>=0?'pos':'neg';
   document.getElementById('d-nw-liquid').textContent=fS(nwLQ);document.getElementById('d-nw-liquid').className=nwLQ>=0?'pos':'neg';
@@ -1164,6 +1167,26 @@ function calcRetire(){
     <div style="font-family:'DM Sans',sans-serif;font-size:17px;font-weight:800;margin-bottom:4px;letter-spacing:-.2px">${vi} ${vt}</div>
     <div style="font-size:13px;color:${vcol}">${ok?'Keep building.':close?'Small changes can close the gap.':'Consider increasing savings or adjusting timeline.'}</div>
   </div>
+
+  <div class="row"><span style="font-size:13px;color:var(--sub)">Required nest egg</span><span style="font-weight:700;color:var(--gold)">${fS(req,true)}</span></div>
+  <div class="row"><span style="font-size:13px;color:var(--sub)">Projected at retirement (age ${rAge})</span><span style="font-weight:700;color:var(--blue)">${fS(futNW,true)}</span></div>
+  <div class="row"><span style="font-size:13px;color:var(--sub)">Surplus / (Shortfall)</span><span class="${surplus>=0?'pos':'neg'}" style="font-weight:700">${fS(surplus,true)}</span></div>
+  <div style="margin-top:10px;margin-bottom:14px">
+    <div style="display:flex;justify-content:space-between;margin-bottom:5px">
+      <span style="font-size:12px;color:var(--sub)">Funding progress</span>
+      <span style="font-size:12px;font-weight:700;color:${vcol}">${pct.toFixed(0)}%</span>
+    </div>
+    <div class="bar-t" style="height:10px;border-radius:6px">
+      <div class="bar-f" style="width:${pct}%;background:${vcol};height:10px;border-radius:6px"></div>
+    </div>
+  </div>
+  ${earliest!=null?`<div style="margin-bottom:14px;padding:14px 16px;background:var(--blue-dim);border-radius:14px;border:1px solid var(--blue-mid)">
+    <div style="font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.08em;color:var(--sub);margin-bottom:6px">Earliest Retire Age</div>
+    <div style="font-family:'DM Sans',sans-serif;font-size:32px;font-weight:800;color:var(--blue);letter-spacing:-.5px;">${earliest} <span style="font-size:15px;color:var(--sub);font-weight:600">years old</span></div>
+    <div style="font-size:13px;color:var(--sub);margin-top:4px">${earliest<=rAge?'Earlier than or at your target! 🎉':earliest-rAge+' yr(s) later than target'}</div>
+  </div>`:''}
+
+  <div class="divr"></div>
   <div style="font-size:10px;font-weight:800;text-transform:uppercase;letter-spacing:.08em;color:var(--blue);margin-bottom:6px">Before Retirement</div>
   ${incPre>0?`
     <div class="row"><span style="font-size:13px;color:var(--sub)">Monthly income</span><span style="font-weight:700">${fS(incPre,true)}</span></div>
@@ -1173,6 +1196,7 @@ function calcRetire(){
   `:`<div class="row"><span style="font-size:13px;color:var(--sub)">Monthly surplus invested (${(savRtn*100).toFixed(1)}%/yr)</span><span style="font-weight:700;color:var(--blue)">${fS(ems,true)}/mo</span></div>`}
   <div class="row"><span style="font-size:13px;color:var(--sub)">Current portfolio (${(ret*100).toFixed(1)}%/yr)</span><span style="font-weight:700">${fS(curNW,true)}</span></div>
   <div class="row" style="border-bottom:none"><span style="font-size:13px;color:var(--sub)">Projected NW at age ${rAge}</span><span style="font-weight:700;color:var(--blue)">${fS(futNW,true)}</span></div>
+
   <div class="divr"></div>
   <div style="font-size:10px;font-weight:800;text-transform:uppercase;letter-spacing:.08em;color:var(--green);margin-bottom:6px">After Retirement</div>
   <div class="row"><span style="font-size:13px;color:var(--sub)">Monthly expenses at ${rAge} (inflation adj.)</span><span style="font-weight:700">${fS(infExp,true)}/mo</span></div>
@@ -1180,25 +1204,7 @@ function calcRetire(){
   ${savPost>0?`<div class="row"><span style="font-size:13px;color:var(--sub)">Reinvested savings (${(savPostRtn*100).toFixed(1)}%/yr)</span><span style="font-weight:700;color:var(--blue)">−${fS(savPost,true)}/mo</span></div>`:''}
   ${incPost>0?`<div class="row"><span style="font-size:13px;color:var(--sub)">Other income</span><span style="font-weight:700;color:var(--green)">−${fS(incPost,true)}/mo</span></div>`:''}
   ${cpf>0?`<div class="row"><span style="font-size:13px;color:var(--sub)">CPF Life (from 65)</span><span style="font-weight:700;color:var(--green)">−${fS(cpf,true)}/mo</span></div>`:''}
-  <div class="row"><span style="font-size:13px;color:var(--sub)">Net monthly drawdown from portfolio</span><span style="font-weight:700;color:var(--red)">${fS(nd,true)}/mo</span></div>
-  <div class="divr"></div>
-  <div class="row"><span style="font-size:13px;color:var(--sub)">Required nest egg</span><span style="font-weight:700;color:var(--gold)">${fS(req,true)}</span></div>
-  <div class="row"><span style="font-size:13px;color:var(--sub)">Projected at retirement</span><span style="font-weight:700;color:var(--blue)">${fS(futNW,true)}</span></div>
-  <div class="row"><span style="font-size:13px;color:var(--sub)">Surplus / (Shortfall)</span><span class="${surplus>=0?'pos':'neg'}" style="font-weight:700">${fS(surplus,true)}</span></div>
-  <div style="margin-top:14px">
-    <div style="display:flex;justify-content:space-between;margin-bottom:5px">
-      <span style="font-size:12px;color:var(--sub)">Funding progress</span>
-      <span style="font-size:12px;font-weight:700;color:${vcol}">${pct.toFixed(0)}%</span>
-    </div>
-    <div class="bar-t" style="height:10px;border-radius:6px">
-      <div class="bar-f" style="width:${pct}%;background:${vcol};height:10px;border-radius:6px"></div>
-    </div>
-  </div>
-  ${earliest!=null?`<div style="margin-top:14px;padding:14px 16px;background:var(--blue-dim);border-radius:14px;border:1px solid var(--blue-mid)">
-    <div style="font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.08em;color:var(--sub);margin-bottom:6px">Earliest Retire Age</div>
-    <div style="font-family:'DM Sans',sans-serif;font-size:32px;font-weight:800;color:var(--blue);letter-spacing:-.5px;">${earliest} <span style="font-size:15px;color:var(--sub);font-weight:600">years old</span></div>
-    <div style="font-size:13px;color:var(--sub);margin-top:4px">${earliest<=rAge?'Earlier than or at your target! 🎉':earliest-rAge+' yr(s) later than target'}</div>
-  </div>`:''}
+  <div class="row" style="border-bottom:none"><span style="font-size:13px;color:var(--sub)">Net monthly drawdown from portfolio</span><span style="font-weight:700;color:var(--red)">${fS(nd,true)}/mo</span></div>
   </div>`;
   renderGoals();
 }
