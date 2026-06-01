@@ -650,7 +650,27 @@ function renderPie(){const sel=document.getElementById('pie-month-sel');if(!sel)
 // ── DASHBOARD ──
 function renderDash(){
   const lm=latest(),pm=prev();
-  if(!lm){document.getElementById('d-period').textContent='No data — tap + Month';document.getElementById('d-nw').textContent='S$—';['d-a','d-l','d-nw-total','d-nw-noprop','d-nw-liquid','d-liquid','d-illiquid'].forEach(id=>{const e=document.getElementById(id);if(e)e.textContent='—';});document.getElementById('d-gap').innerHTML='<div style="color:var(--sub);font-size:13px">Add at least 3 months to see growth analysis.</div>';return;}
+  if(!lm){
+    document.getElementById('d-period').textContent='No data — tap + Month';
+    document.getElementById('d-nw').textContent='S$—';
+    document.getElementById('d-delta').innerHTML='';
+    document.getElementById('d-ad').innerHTML='';
+    document.getElementById('d-ld').innerHTML='';
+    ['d-a','d-l','d-nw-total','d-nw-noprop','d-nw-liquid','d-liquid','d-illiquid'].forEach(id=>{
+      const e=document.getElementById(id);if(e){e.textContent='—';e.className='';}
+    });
+    document.getElementById('cpf-body').innerHTML='<div style="color:var(--sub);font-size:13px">No data yet.</div>';
+    document.getElementById('d-acat').innerHTML='<div style="color:var(--sub);font-size:13px">No data yet.</div>';
+    document.getElementById('d-lcat').innerHTML='<div style="color:var(--sub);font-size:13px">No data yet.</div>';
+    document.getElementById('d-gap').innerHTML='<div style="color:var(--sub);font-size:13px">Add at least 3 months to see growth analysis.</div>';
+    document.getElementById('d-goals-body').innerHTML='';
+    document.getElementById('d-fx').textContent='';
+    ['c-spark','c-bar','c-pie'].forEach(id=>{const c=document.getElementById(id);if(c){const ctx=c.getContext('2d');ctx.clearRect(0,0,c.width,c.height);}});
+    const ps=document.getElementById('pie-month-sel');if(ps)ps.innerHTML='';
+    const pl=document.getElementById('pie-legend');if(pl)pl.innerHTML='';
+    const yb=document.getElementById('btn-yearly');if(yb)yb.style.display='none';
+    return;
+  }
   const l=calcNW(lm.values),p=pm?calcNW(pm.values):null;
   document.getElementById('d-period').textContent=lm.label;
   document.getElementById('d-nw').textContent=fS(l.net);
