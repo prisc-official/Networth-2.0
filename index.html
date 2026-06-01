@@ -241,19 +241,8 @@ select.inp{appearance:none;-webkit-appearance:none;background-image:url("data:im
   <div id="v-decum" style="display:none">
     <div class="card">
       <div class="lbl" style="margin-bottom:4px">How long will my money last?</div>
-      <div style="font-size:12px;color:var(--sub);margin-bottom:14px">Based on your current net worth, expenses and investment return.</div>
-      <div style="display:grid;grid-template-columns:1fr 1fr;gap:9px;margin-bottom:9px">
-        <div style="display:flex;flex-direction:column"><div class="lbl">Current Age</div><input class="inp" id="dc-age" type="number" inputmode="numeric" placeholder="55" style="margin-top:auto" oninput="calcDecum()"/></div>
-        <div style="display:flex;flex-direction:column"><div class="lbl">Monthly Expenses</div><input class="inp" id="dc-exp" type="number" inputmode="decimal" placeholder="5000" style="margin-top:auto" oninput="calcDecum()"/></div>
-      </div>
-      <div style="display:grid;grid-template-columns:1fr 1fr;gap:9px;margin-bottom:9px">
-        <div style="display:flex;flex-direction:column"><div class="lbl tip-wrap">Portfolio Return %/yr<span class="tip-icon" tabindex="0" onclick="this.classList.toggle('open')">?</span><div class="tip-box"><b>Expected return on your invested portfolio in retirement.</b><br/><br/>Be conservative — a common rule of thumb is <b>4% withdrawal rate</b> (the portfolio returns ~5–6%, net of fees, and you draw 4%).<br/><br/>Recommended: <b>3–5%</b> in retirement.</div></div><input class="inp" id="dc-rtn" type="number" inputmode="decimal" placeholder="4" style="margin-top:auto" oninput="calcDecum()"/></div>
-        <div style="display:flex;flex-direction:column"><div class="lbl tip-wrap">CPF Life at 65/mo<span class="tip-icon" tabindex="0" onclick="this.classList.toggle('open')">?</span><div class="tip-box"><b>CPF LIFE</b> pays monthly income from age 65 for life — this reduces how much you need to draw from your portfolio each month.</div></div><input class="inp" id="dc-cpf" type="number" inputmode="decimal" placeholder="0" style="margin-top:auto" oninput="calcDecum()"/></div>
-      </div>
-      <div style="display:grid;grid-template-columns:1fr 1fr;gap:9px">
-        <div style="display:flex;flex-direction:column"><div class="lbl">Other Income/mo</div><input class="inp" id="dc-inc" type="number" inputmode="decimal" placeholder="0" style="margin-top:auto" oninput="calcDecum()"/></div>
-        <div style="display:flex;flex-direction:column"><div class="lbl">Inflation %/yr</div><input class="inp" id="dc-inf" type="number" inputmode="decimal" placeholder="2.5" style="margin-top:auto" oninput="calcDecum()"/></div>
-      </div>
+      <div style="font-size:12px;color:var(--sub);margin-bottom:10px">Based on your retirement plan inputs. Update figures in Accumulation mode.</div>
+      <div id="dc-summary" style="font-size:12px;color:var(--sub);line-height:1.9;background:var(--s2);border-radius:10px;padding:10px 12px;margin-bottom:4px"></div>
     </div>
     <div id="dc-result"></div>
   </div>
@@ -572,8 +561,16 @@ function fS(n,c=false){if(n==null||isNaN(n))return'S$—';const a=Math.abs(n),s=
 function fC(n,ccy,c=false){if(!ccy||ccy==='SGD')return fS(n,c);const sym={USD:'US$',EUR:'€',GBP:'£',AUD:'A$',JPY:'¥',HKD:'HK$',MYR:'RM',CNY:'¥'}[ccy]||(ccy+' ');if(c&&Math.abs(n)>=1000)return sym+(n/1000).toFixed(1)+'k';return sym+n.toLocaleString('en-SG',{maximumFractionDigits:0});}
 function fD(n){return(n>=0?'+':'')+fS(n,true);}
 function calcNW(vals,fx){const f=fx||D.fxRates;let a=0,l=0;D.accounts.forEach(acc=>{const v=(vals[acc.id]||0)*(acc.ccy&&acc.ccy!=='SGD'?(f[acc.ccy]||1):1);acc.type==='asset'?a+=v:l+=v;});return{assets:a,liabilities:l,net:a-l};}
-function latest(){return D.months[D.months.length-1];}
-function prev(){return D.months[D.months.length-2];}
+// Sort months chronologically by parsing label "Mon YYYY"
+const MONTH_ORDER={Jan:0,Feb:1,Mar:2,Apr:3,May:4,Jun:5,Jul:6,Aug:7,Sep:8,Oct:9,Nov:10,Dec:11};
+function monthSortKey(m){
+  const parts=(m.label||'').split(' ');
+  const yr=parseInt(parts[1])||0,mo=MONTH_ORDER[parts[0]]||0;
+  return yr*12+mo;
+}
+function sortedMonths(){return[...D.months].sort((a,b)=>monthSortKey(a)-monthSortKey(b));}
+function latest(){const s=sortedMonths();return s[s.length-1];}
+function prev(){const s=sortedMonths();return s.length>=2?s[s.length-2]:null;}
 function getAllCats(){return[...new Set(D.accounts.map(a=>a.category))];}
 function escH(s){return String(s).replace(/&/g,'&amp;').replace(/"/g,'&quot;').replace(/</g,'&lt;').replace(/>/g,'&gt;');}
 function yLabel(n){const a=Math.abs(n);if(a>=1e6)return'S$'+(n/1e6).toFixed(1)+'M';if(a>=1000)return'S$'+(n/1000).toFixed(0)+'k';return'S$'+Math.round(n);}
@@ -663,12 +660,12 @@ function drawSpark(id,data,labels){
   function hideTip(){redraw(null);if(tip)tip.style.display='none';}
   c.onmousemove=showTip;c.onmouseleave=hideTip;c.ontouchmove=e=>{e.preventDefault();showTip(e);};c.ontouchend=()=>setTimeout(hideTip,1800);
 }
-function getYearlyData(){const by={};D.months.forEach(m=>{const yr=m.label.split(' ').pop();by[yr]=m;});return Object.keys(by).sort().map(yr=>({label:yr,...calcNW(by[yr].values)}));}
+function getYearlyData(){const by={};sortedMonths().forEach(m=>{const yr=m.label.split(' ').pop();by[yr]=m;});return Object.keys(by).sort().map(yr=>({label:yr,...calcNW(by[yr].values)}));}
 function drawBar(){
   const c=document.getElementById('c-bar');if(!c)return;
   const dpr=devicePixelRatio||1,W=c.offsetWidth*dpr||420,H=c.offsetHeight*dpr||160;
   c.width=W;c.height=H;const ctx=c.getContext('2d');ctx.clearRect(0,0,W,H);
-  const pts=_chartView==='yearly'?getYearlyData():D.months.map(m=>({label:m.label,...calcNW(m.values)}));
+  const pts=_chartView==='yearly'?getYearlyData():sortedMonths().map(m=>({label:m.label,...calcNW(m.values)}));
   if(!pts.length)return;
   const XP=54*dpr,BOT=20*dpr,TOP=8*dpr,cW=W-XP,cH=H-TOP-BOT;
   const maxA=Math.max(...pts.map(d=>d.assets),1)*1.05,toH=v=>(v/maxA)*cH*.88;
@@ -749,14 +746,14 @@ function renderDash(){
   document.getElementById('d-liquid').textContent=fS(liqT,true);
   document.getElementById('d-illiquid').textContent=fS(illT,true);
   // Charts
-  const nwData=D.months.map(m=>calcNW(m.values).net),nwLabels=D.months.map(m=>m.label);
+  const _sm=sortedMonths();const nwData=_sm.map(m=>calcNW(m.values).net),nwLabels=_sm.map(m=>m.label);
   setTimeout(()=>drawSpark('c-spark',nwData,nwLabels),50);
   const yb=document.getElementById('btn-yearly');if(yb)yb.style.display=D.months.length>12?'block':'none';
   setTimeout(()=>drawBar(),80);
   // Pie — populate with latest month first, default to latest
   const ps=document.getElementById('pie-month-sel');
   if(ps){
-    ps.innerHTML=[...D.months].reverse().map(m=>`<option value="${m.id}">${escH(m.label)}</option>`).join('');
+    ps.innerHTML=[...sortedMonths()].reverse().map(m=>`<option value="${m.id}">${escH(m.label)}</option>`).join('');
     ps.value=lm.id;
     setTimeout(renderPie,60);
   }
@@ -768,7 +765,7 @@ function renderDash(){
   document.getElementById('d-lcat').innerHTML=lH||'<div style="color:var(--sub);font-size:13px">No liabilities.</div>';
   // Growth
   if(D.months.length>=3){
-    const all=D.months.map(m=>calcNW(m.values).net),first=all[0],last=all[all.length-1],mos=D.months.length-1,monthly=(last-first)/mos;
+    const _smg=sortedMonths();const all=_smg.map(m=>calcNW(m.values).net),first=all[0],last=all[all.length-1],mos=_smg.length-1,monthly=(last-first)/mos;
     const tgts=[500000,1000000,2000000,5000000].filter(t=>t>last);
     let gh=`<div class="row"><span style="font-size:13px;color:var(--sub)">Avg monthly growth</span><span style="font-weight:700;font-size:13px" class="${monthly>=0?'pos':'neg'}">${fD(monthly)}</span></div><div class="row"><span style="font-size:13px;color:var(--sub)">Total growth (${mos} mo)</span><span style="font-weight:700;font-size:13px" class="${(last-first)>=0?'pos':'neg'}">${fD(last-first)}</span></div>`;
     const byY={};D.months.forEach(m=>{const yr=m.label.split(' ').pop();byY[yr]=calcNW(m.values).net;});
@@ -1114,64 +1111,79 @@ function setRetireMode(mode){
     if(btnAcc)btnAcc.className='tg';
     if(btnDec)btnDec.className='tg tga';
     if(sub)sub.textContent='How long will my money last?';
-    // Pre-fill from existing retire inputs
-    const age=document.getElementById('r-age');
-    const rtn=document.getElementById('r-rtn');
-    const exp=document.getElementById('r-exp');
-    const cpf=document.getElementById('r-cpf');
-    const inf=document.getElementById('r-inf');
-    const inc=document.getElementById('r-inc-post');
-    if(age&&!document.getElementById('dc-age').value) document.getElementById('dc-age').value=age.value;
-    if(rtn&&!document.getElementById('dc-rtn').value) document.getElementById('dc-rtn').value=rtn.value;
-    if(exp&&!document.getElementById('dc-exp').value) document.getElementById('dc-exp').value=exp.value;
-    if(cpf&&!document.getElementById('dc-cpf').value) document.getElementById('dc-cpf').value=cpf.value;
-    if(inf&&!document.getElementById('dc-inf').value) document.getElementById('dc-inf').value=inf.value;
-    if(inc&&!document.getElementById('dc-inc').value) document.getElementById('dc-inc').value=inc.value;
     calcDecum();
   }
 }
 
 function calcDecum(){
-  const age=parseFloat(document.getElementById('dc-age').value)||55;
-  const exp=parseFloat(document.getElementById('dc-exp').value)||5000;
-  const ret=(parseFloat(document.getElementById('dc-rtn').value)||4)/100;
-  const cpf=parseFloat(document.getElementById('dc-cpf').value)||0;
-  const inc=parseFloat(document.getElementById('dc-inc').value)||0;
-  const inf=(parseFloat(document.getElementById('dc-inf').value)||2.5)/100;
-  const curNW=latest()?calcNW(latest().values).net:0;
-  if(!curNW){
-    document.getElementById('dc-result').innerHTML='<div class="card" style="color:var(--sub);font-size:13px;text-align:center">Add a month entry first to calculate.</div>';
+  // Pull all values from accumulation inputs
+  const age    = parseFloat(document.getElementById('r-age').value)||35;
+  const rAge   = parseFloat(document.getElementById('r-ret').value)||55;
+  const life   = parseFloat(document.getElementById('r-life').value)||85;
+  const ret    = (parseFloat(document.getElementById('r-rtn').value)||5)/100;
+  const inf    = (parseFloat(document.getElementById('r-inf').value)||2.5)/100;
+  const cpf    = parseFloat(document.getElementById('r-cpf').value)||0;
+  const exp    = parseFloat(document.getElementById('r-exp').value)||4000;
+  const inc    = parseFloat(document.getElementById('r-inc-post').value)||0;
+  const savRtn = (parseFloat(document.getElementById('r-sav-rtn').value)||2.5)/100;
+  const sav    = parseFloat(document.getElementById('r-sav').value)||0;
+
+  // Compute projected NW at retirement (same as accumulation)
+  const curNWFull = latest()?calcNW(latest().values).net:0;
+  let curNW = curNWFull;
+  if(!_propInPortfolio&&latest()){
+    const lmv=latest().values;
+    const propAssets=D.accounts.filter(a=>a.sub==='prop'||a.category==='Property').reduce((s,a)=>s+toSGD(lmv[a.id]||0,a.ccy),0);
+    const mortgageLiab=D.accounts.filter(a=>a.type==='liability'&&(a.category==='Mortgage'||a.name.toLowerCase().includes('home'))).reduce((s,a)=>s+toSGD(lmv[a.id]||0,a.ccy),0);
+    curNW=curNWFull-(propAssets-mortgageLiab);
+  }
+
+  const ytr=Math.max(rAge-age,0);
+  const mr=ret/12; const msr=savRtn/12;
+  const months=ytr*12;
+  const pg=curNW*Math.pow(1+mr,months);
+  const sg=msr>0?sav*((1+msr)**months-1)/msr:sav*months;
+  const portfolioAtRetire=pg+sg;
+
+  // Show summary of what's being used
+  const sumEl=document.getElementById('dc-summary');
+  if(sumEl) sumEl.innerHTML=
+    `<b>Starting at age ${rAge} with projected S${fS(portfolioAtRetire,true)}</b><br/>` +
+    `Expenses: ${fS(exp,true)}/mo · Return: ${(ret*100).toFixed(1)}%/yr · Inflation: ${(inf*100).toFixed(1)}%/yr` +
+    (cpf>0?` · CPF Life: ${fS(cpf,true)}/mo from 65`:'') +
+    (inc>0?` · Other income: ${fS(inc,true)}/mo`:'');
+
+  if(!portfolioAtRetire){
+    document.getElementById('dc-result').innerHTML='<div class="card" style="color:var(--sub);font-size:13px;text-align:center">Add retirement inputs in Accumulation mode first.</div>';
     return;
   }
 
-  const mr=ret/12;
-  const rr=(1+ret)/(1+inf)-1;
-  const mrr=rr/12;
+  const mr2=ret/12;
+  const yir=Math.max(life-rAge,0);
 
-  // Simulate month by month until portfolio runs out or 100 years
-  let portfolio=curNW;
-  let months=0;
-  const maxMonths=(100-age)*12;
-  while(portfolio>0&&months<maxMonths){
-    const yr=months/12;
+  // Simulate month by month from retirement age until portfolio runs out
+  let portfolio=portfolioAtRetire;
+  let simMonths=0;
+  const maxMonths=(100-rAge)*12;
+  while(portfolio>0&&simMonths<maxMonths){
+    const yr=simMonths/12;
     const infExp=exp*Math.pow(1+inf,yr);
-    const cpfM=age+yr>=65?cpf:0;
+    const cpfM=(rAge+yr)>=65?cpf:0;
     const draw=Math.max(infExp-inc-cpfM,0);
-    portfolio=portfolio*(1+mr)-draw;
-    months++;
+    portfolio=portfolio*(1+mr2)-draw;
+    simMonths++;
   }
 
-  const yearsLast=months/12;
-  const runsOut=months<maxMonths;
-  const ageRunsOut=Math.round(age+yearsLast);
+  const yearsLast=simMonths/12;
+  const runsOut=simMonths<maxMonths;
+  const ageRunsOut=Math.round(rAge+yearsLast);
 
-  // Safe withdrawal rate check (4% rule)
-  const annualDraw=(exp-inc)*12;
-  const swr=(curNW>0?annualDraw/curNW*100:0);
+  // Safe withdrawal rate
+  const annualDraw=Math.max(exp-inc,0)*12;
+  const swr=portfolioAtRetire>0?annualDraw/portfolioAtRetire*100:0;
   const swrOk=swr<=4;
 
-  // Monthly net drawdown now
-  const cpfNow=age>=65?cpf:0;
+  const cpfNow=rAge>=65?cpf:0;
   const netDraw=Math.max(exp-inc-cpfNow,0);
 
   const ok=!runsOut||ageRunsOut>=90;
@@ -1183,14 +1195,15 @@ function calcDecum(){
     <div style="font-family:'DM Sans',sans-serif;font-size:17px;font-weight:800;margin-bottom:4px;letter-spacing:-.2px">${vi} ${runsOut?`Money lasts until age ${ageRunsOut}`:'Money outlasts life expectancy'}</div>
     <div style="font-size:13px;color:${ok?'var(--green)':ageRunsOut>=80?'var(--gold)':'var(--red)'}">${runsOut?(ageRunsOut>=90?'Well covered — good buffer past 90.':ageRunsOut>=80?'Manageable — consider reducing expenses or increasing returns.':'Portfolio may run short — review your plan.'):'Your portfolio should last your lifetime.'}</div>
   </div>
-  <div class="row"><span style="font-size:13px;color:var(--sub)">Current portfolio</span><span style="font-weight:700">${fS(curNW,true)}</span></div>
-  <div class="row"><span style="font-size:13px;color:var(--sub)">Monthly expenses (today)</span><span style="font-weight:700">${fS(exp,true)}</span></div>
+  <div class="row"><span style="font-size:13px;color:var(--sub)">Projected portfolio at ${rAge}</span><span style="font-weight:700">${fS(portfolioAtRetire,true)}</span></div>
+  <div class="row"><span style="font-size:13px;color:var(--sub)">Monthly expenses at ${rAge} (inflation adj.)</span><span style="font-weight:700">${fS(exp,true)}</span></div>
   <div class="row"><span style="font-size:13px;color:var(--sub)">Net monthly drawdown</span><span style="font-weight:700;color:var(--red)">${fS(netDraw,true)}/mo</span></div>
   <div class="row"><span style="font-size:13px;color:var(--sub)">Withdrawal rate</span><span style="font-weight:700;color:${swrOk?'var(--green)':'var(--red)'}">${swr.toFixed(1)}% ${swrOk?'✓ Safe (≤4%)':'⚠ High (>4%)'}</span></div>
   <div class="divr"></div>
-  ${runsOut?`<div class="row"><span style="font-size:13px;color:var(--sub)">Portfolio runs out at age</span><span style="font-weight:800;font-size:15px;color:${ok?'var(--green)':ageRunsOut>=80?'var(--gold)':'var(--red)'}">${ageRunsOut}</span></div>
-  <div class="row" style="border-bottom:none"><span style="font-size:13px;color:var(--sub)">Years of funding</span><span style="font-weight:700">${yearsLast.toFixed(1)} years</span></div>`
-  :`<div class="row" style="border-bottom:none"><span style="font-size:13px;color:var(--sub)">Portfolio lasts beyond</span><span style="font-weight:800;font-size:15px;color:var(--green)">age ${100} ✓</span></div>`}
+  ${runsOut
+    ?`<div class="row"><span style="font-size:13px;color:var(--sub)">Portfolio runs out at age</span><span style="font-weight:800;font-size:15px;color:${ok?'var(--green)':ageRunsOut>=80?'var(--gold)':'var(--red)'}">${ageRunsOut}</span></div>
+  <div class="row" style="border-bottom:none"><span style="font-size:13px;color:var(--sub)">Years of funding</span><span style="font-weight:700">${yearsLast.toFixed(1)} yrs</span></div>`
+    :`<div class="row" style="border-bottom:none"><span style="font-size:13px;color:var(--sub)">Portfolio lasts beyond</span><span style="font-weight:800;font-size:15px;color:var(--green)">age 100 ✓</span></div>`}
   </div>`;
 }
 let _exp65Reduce=false;
@@ -1425,10 +1438,10 @@ function renderHistory(){
   const body=document.getElementById('h-body');
   if(!D.months.length){body.innerHTML='<div style="text-align:center;color:var(--sub);padding:40px 20px">No months recorded yet.</div>';body.onclick=null;return;}
   let html='';
-  [...D.months].reverse().forEach(m=>{
+  [...sortedMonths()].reverse().forEach(m=>{
     const{assets,liabilities,net}=calcNW(m.values);
-    const oi=D.months.findIndex(x=>x.id===m.id);
-    const pm=oi>0?D.months[oi-1]:null;
+    const _smd=sortedMonths();const oi=_smd.findIndex(x=>x.id===m.id);
+    const pm=oi>0?_smd[oi-1]:null;
     const d=pm?net-calcNW(pm.values).net:null;
     const isSel=_historySelected.has(m.id);
     html+=`<div class="sw-wrap" data-id="${m.id}" style="margin:0 14px 10px;border-radius:20px;">
@@ -1871,7 +1884,7 @@ window.addEventListener('load',()=>{
   });
   window.addEventListener('resize',()=>{
     if(document.getElementById('v-dash').classList.contains('active')){
-      drawSpark('c-spark',D.months.map(m=>calcNW(m.values).net),D.months.map(m=>m.label));
+      const _sme=sortedMonths();drawSpark('c-spark',_sme.map(m=>calcNW(m.values).net),_sme.map(m=>m.label));
       drawBar();
     }
   });
