@@ -123,8 +123,10 @@ select.inp{appearance:none;-webkit-appearance:none;background-image:url("data:im
     <div class="lbl" style="color:rgba(255,255,255,.7)">Total Net Worth (SGD)</div>
     <div class="xl" id="d-nw" style="color:#fff">—</div>
     <div id="d-delta" style="margin-top:6px;font-size:13px"></div>
-    <div style="position:relative;margin-top:16px">
-      <canvas id="c-spark" style="width:100%;height:90px;display:block;"></canvas>
+    <div style="position:relative;margin-top:16px;overflow-x:auto;-webkit-overflow-scrolling:touch;">
+      <div id="spark-wrap" style="min-width:100%">
+        <canvas id="c-spark" style="width:100%;height:90px;display:block;"></canvas>
+      </div>
       <div id="spark-tip" style="display:none;position:absolute;top:4px;right:0;background:rgba(0,0,0,.7);color:#fff;padding:4px 10px;border-radius:8px;font-size:11px;font-weight:700;pointer-events:none;white-space:nowrap;"></div>
     </div>
   </div>
@@ -151,13 +153,15 @@ select.inp{appearance:none;-webkit-appearance:none;background-image:url("data:im
         <button class="bsm" id="btn-yearly" style="font-size:11px;padding:3px 10px;display:none" onclick="setChartView('yearly')">Yearly</button>
       </div>
     </div>
-    <div style="position:relative">
-      <canvas id="c-bar" style="width:100%;height:160px;display:block;"></canvas>
-      <div id="bar-tip" style="display:none;position:absolute;top:0;background:var(--s1);border:1px solid var(--border2);border-radius:10px;padding:6px 10px;font-size:11px;pointer-events:none;box-shadow:0 4px 12px rgba(0,0,0,.1);min-width:120px;">
-        <div id="bar-tip-label" style="font-weight:700;margin-bottom:3px;color:var(--sub)"></div>
-        <div id="bar-tip-nw" style="font-weight:800;color:var(--blue)"></div>
-        <div id="bar-tip-a" style="color:var(--green);font-size:10px"></div>
-        <div id="bar-tip-l" style="color:var(--red);font-size:10px"></div>
+    <div style="overflow-x:auto;-webkit-overflow-scrolling:touch;">
+      <div id="bar-wrap" style="min-width:100%">
+        <canvas id="c-bar" style="width:100%;height:160px;display:block;"></canvas>
+        <div id="bar-tip" style="display:none;position:absolute;top:0;background:var(--s1);border:1px solid var(--border2);border-radius:10px;padding:6px 10px;font-size:11px;pointer-events:none;box-shadow:0 4px 12px rgba(0,0,0,.1);min-width:120px;">
+          <div id="bar-tip-label" style="font-weight:700;margin-bottom:3px;color:var(--sub)"></div>
+          <div id="bar-tip-nw" style="font-weight:800;color:var(--blue)"></div>
+          <div id="bar-tip-a" style="color:var(--green);font-size:10px"></div>
+          <div id="bar-tip-l" style="color:var(--red);font-size:10px"></div>
+        </div>
       </div>
     </div>
     <div style="display:flex;gap:14px;margin-top:10px">
@@ -277,21 +281,21 @@ select.inp{appearance:none;-webkit-appearance:none;background-image:url("data:im
     </div>
     <div style="display:grid;grid-template-columns:1fr 1fr;gap:9px">
       <div style="display:flex;flex-direction:column"><div class="lbl">Monthly Expenses</div><input class="inp" id="r-exp-pre" type="number" inputmode="decimal" placeholder="4000" style="margin-top:auto" oninput="calcRetire()"/></div>
-      <div style="display:flex;flex-direction:column"><div class="lbl tip-wrap">Savings Return %/yr<span class="tip-icon" tabindex="0" onclick="this.classList.toggle('open')">?</span><div class="tip-box"><b>Conservative return on your monthly surplus.</b><br/><br/>Your existing portfolio compounds at the Portfolio Return rate above.<br/><br/>Your <b>new monthly savings</b> may earn less — they often sit in cash, CPF OA (2.5%) or SSBs (3%) before being deployed.<br/><br/>Recommended: <b>2–3%</b>. Default: <b>2.5%</b>.</div></div><input class="inp" id="r-sav-rtn" type="number" inputmode="decimal" placeholder="2.5" style="margin-top:auto" oninput="calcRetire()"/></div>
+      <div style="display:flex;flex-direction:column"><div class="lbl tip-wrap">Return on Surplus %/yr<span class="tip-icon" tabindex="0" onclick="this.classList.toggle('open')">?</span><div class="tip-box"><b>Conservative return on your monthly surplus.</b><br/><br/>Your existing portfolio compounds at the Portfolio Return rate above.<br/><br/>Your <b>new monthly savings</b> may earn less — they often sit in cash, CPF OA (2.5%) or SSBs (3%) before being deployed.<br/><br/>Recommended: <b>2–3%</b>. Default: <b>2.5%</b>.</div></div><input class="inp" id="r-sav-rtn" type="number" inputmode="decimal" placeholder="2.5" style="margin-top:auto" oninput="calcRetire()"/></div>
     </div>
   </div>
   <div class="card" style="border-left:3px solid var(--green)">
     <div class="lbl" style="margin-bottom:10px;color:var(--green)">After Retirement</div>
     <div style="display:grid;grid-template-columns:1fr 1fr;gap:9px;margin-bottom:9px">
       <div style="display:flex;flex-direction:column"><div class="lbl">Monthly Expenses</div><input class="inp" id="r-exp" type="number" inputmode="decimal" placeholder="5000" style="margin-top:auto" oninput="calcRetire()"/></div>
-      <div style="display:flex;flex-direction:column"><div class="lbl tip-wrap">Monthly Reinvested<span class="tip-icon" tabindex="0" onclick="this.classList.toggle('open')">?</span><div class="tip-box"><b>Money you still set aside after retiring.</b><br/><br/>Examples:<br/>• Part-time work surplus<br/>• Rental income reinvested<br/>• Dividends not spent<br/><br/>This reduces your monthly drawdown from your portfolio, so you need a smaller nest egg.<br/><br/><b>Leave at 0</b> if you expect no surplus after expenses.</div></div><input class="inp" id="r-sav-post" type="number" inputmode="decimal" placeholder="0" style="margin-top:auto" oninput="calcRetire()"/></div>
+      <div style="display:flex;flex-direction:column"><div class="lbl tip-wrap">Monthly Surplus<span class="tip-icon" tabindex="0" onclick="this.classList.toggle('open')">?</span><div class="tip-box"><b>Money you still set aside after retiring.</b><br/><br/>Examples:<br/>• Part-time work surplus<br/>• Rental income reinvested<br/>• Dividends not spent<br/><br/>This reduces your monthly drawdown from your portfolio, so you need a smaller nest egg.<br/><br/><b>Leave at 0</b> if you expect no surplus after expenses.</div></div><input class="inp" id="r-sav-post" type="number" inputmode="decimal" placeholder="0" style="margin-top:auto" oninput="calcRetire()"/></div>
     </div>
     <div style="display:grid;grid-template-columns:1fr 1fr;gap:9px;margin-bottom:9px">
       <div style="display:flex;flex-direction:column"><div class="lbl tip-wrap">Other Income/mo<span class="tip-icon" tabindex="0" onclick="this.classList.toggle('open')">?</span><div class="tip-box"><b>Income you receive in retirement beyond CPF Life.</b><br/><br/>Examples:<br/>• Rental income<br/>• Part-time / freelance<br/>• Dividends paid out<br/>• Spouse's income<br/><br/>This offsets your expenses so you draw less from your portfolio.</div></div><input class="inp" id="r-inc-post" type="number" inputmode="decimal" placeholder="0" style="margin-top:auto" oninput="calcRetire()"/></div>
       <div style="display:flex;flex-direction:column"><div class="lbl tip-wrap">CPF Life at 65/mo<span class="tip-icon" tabindex="0" onclick="this.classList.toggle('open')">?</span><div class="tip-box"><b>CPF LIFE</b> pays monthly income from age 65 for life.<br/><br/>Log in to <b>my.cpf.gov.sg</b> → My Retirement → CPF LIFE Estimator<br/><br/>Typical: <b>S$700–S$2,000/mo</b></div></div><input class="inp" id="r-cpf" type="number" inputmode="decimal" placeholder="0" style="margin-top:auto" oninput="calcRetire()"/></div>
     </div>
     <div style="display:grid;grid-template-columns:1fr 1fr;gap:9px;margin-bottom:9px">
-      <div style="display:flex;flex-direction:column"><div class="lbl tip-wrap">Post-Retire Return %/yr<span class="tip-icon" tabindex="0" onclick="this.classList.toggle('open')">?</span><div class="tip-box"><b>Return on your reinvested savings after retirement.</b><br/><br/>Recommended: <b>2–3%</b> conservative.<br/>Set equal to Portfolio Return if fully reinvested in equities.</div></div><input class="inp" id="r-sav-post-rtn" type="number" inputmode="decimal" placeholder="2.5" style="margin-top:auto" oninput="calcRetire()"/></div>
+      <div style="display:flex;flex-direction:column"><div class="lbl tip-wrap">Return on Surplus %/yr<span class="tip-icon" tabindex="0" onclick="this.classList.toggle('open')">?</span><div class="tip-box"><b>Return on your reinvested savings after retirement.</b><br/><br/>Recommended: <b>2–3%</b> conservative.<br/>Set equal to Portfolio Return if fully reinvested in equities.</div></div><input class="inp" id="r-sav-post-rtn" type="number" inputmode="decimal" placeholder="2.5" style="margin-top:auto" oninput="calcRetire()"/></div>
       <div style="display:flex;flex-direction:column">
         <div class="lbl tip-wrap">Reduce exp. after 65?<span class="tip-icon" tabindex="0" onclick="this.classList.toggle('open')">?</span><div class="tip-box"><b>No = most conservative estimate (recommended).</b><br/><br/>Keeping expenses flat assumes your costs don't drop after 65 — this gives you the largest required nest egg and the safest plan.<br/><br/><b>Yes</b> applies a 15% reduction after 65, reflecting that home loans are typically paid off by then. However healthcare costs rise, so the actual saving is modest.<br/><br/>If in doubt, select <b>No</b>.</div></div>
         <div class="tgg" style="margin-top:auto">
@@ -634,7 +638,14 @@ let _chartView='monthly';
 function setChartView(v){_chartView=v;const mb=document.getElementById('btn-monthly'),yb=document.getElementById('btn-yearly');if(mb){mb.style.background=v==='monthly'?'var(--blue)':'';mb.style.color=v==='monthly'?'#fff':'';mb.style.borderColor=v==='monthly'?'var(--blue)':'';}if(yb){yb.style.background=v==='yearly'?'var(--blue)':'';yb.style.color=v==='yearly'?'#fff':'';yb.style.borderColor=v==='yearly'?'var(--blue)':'';}drawBar();}
 function drawSpark(id,data,labels){
   const c=document.getElementById(id);if(!c||data.length<2)return;
-  const dpr=devicePixelRatio||1,W=c.offsetWidth*dpr||400,H=c.offsetHeight*dpr||90;
+  const dpr=devicePixelRatio||1;
+  // Minimum 60px per data point so labels never overlap
+  const minW=Math.max(c.parentElement.offsetWidth||360, data.length*60);
+  c.style.width=minW+'px';
+  // Scroll to rightmost (latest) on load
+  const wrap=document.getElementById('spark-wrap');
+  if(wrap){wrap.style.width=minW+'px';setTimeout(()=>{const sc=wrap.parentElement;if(sc)sc.scrollLeft=sc.scrollWidth;},60);}
+  const W=minW*dpr,H=c.offsetHeight*dpr||90;
   c.width=W;c.height=H;const ctx=c.getContext('2d');ctx.clearRect(0,0,W,H);
   const XP=52*dpr,BOT=18*dpr,TOP=8*dpr,cW=W-XP,cH=H-TOP-BOT;
   const mn=Math.min(...data),mx=Math.max(...data),rng=mx-mn||1;
@@ -663,10 +674,16 @@ function drawSpark(id,data,labels){
 function getYearlyData(){const by={};sortedMonths().forEach(m=>{const yr=m.label.split(' ').pop();by[yr]=m;});return Object.keys(by).sort().map(yr=>({label:yr,...calcNW(by[yr].values)}));}
 function drawBar(){
   const c=document.getElementById('c-bar');if(!c)return;
-  const dpr=devicePixelRatio||1,W=c.offsetWidth*dpr||420,H=c.offsetHeight*dpr||160;
-  c.width=W;c.height=H;const ctx=c.getContext('2d');ctx.clearRect(0,0,W,H);
+  const dpr=devicePixelRatio||1;
   const pts=_chartView==='yearly'?getYearlyData():sortedMonths().map(m=>({label:m.label,...calcNW(m.values)}));
   if(!pts.length)return;
+  // Minimum 60px per bar so labels never overlap
+  const minW=Math.max(c.parentElement.offsetWidth||360, pts.length*60);
+  c.style.width=minW+'px';
+  const wrap=document.getElementById('bar-wrap');
+  if(wrap){wrap.style.width=minW+'px';setTimeout(()=>{const sc=wrap.parentElement;if(sc)sc.scrollLeft=sc.scrollWidth;},60);}
+  const W=minW*dpr,H=c.offsetHeight*dpr||160;
+  c.width=W;c.height=H;const ctx=c.getContext('2d');ctx.clearRect(0,0,W,H);
   const XP=54*dpr,BOT=20*dpr,TOP=8*dpr,cW=W-XP,cH=H-TOP-BOT;
   const maxA=Math.max(...pts.map(d=>d.assets),1)*1.05,toH=v=>(v/maxA)*cH*.88;
   const n=pts.length,gW=cW/n,bW=Math.max(gW*.28,4*dpr);
@@ -1398,7 +1415,7 @@ function calcRetire(){
     ${preNcf!==null?`<div class="row"><span style="font-size:13px;color:var(--sub)">Net cashflow check</span><span class="${preNcf>=0?'pos':'neg'}" style="font-weight:700">${fS(preNcf,true)}</span></div>`:''}
   `:`<div class="row"><span style="font-size:13px;color:var(--sub)">Monthly surplus invested (${parseFloat((savRtn*100).toFixed(2))}%/yr)</span><span style="font-weight:700;color:var(--blue)">${fS(ems,true)}/mo</span></div>`}
   <div class="row"><span style="font-size:13px;color:var(--sub)">Current portfolio (${parseFloat((ret*100).toFixed(2))}%/yr${_propInPortfolio?'':', excl. property'})</span><span style="font-weight:700">${fS(curNW,true)}</span></div>
-  <div class="row" style="border-bottom:none"><span style="font-size:13px;color:var(--sub)">Projected NW at age ${rAge}</span><span style="font-weight:700;color:var(--blue)">${fS(futNW,true)}</span></div>
+  <div class="row"><span style="font-size:13px;color:var(--sub)">Projected NW at age ${rAge}</span><span style="font-weight:700;color:var(--blue)">${fS(futNW,true)}</span></div>
 
   <div class="divr"></div>
   <div style="font-size:10px;font-weight:800;text-transform:uppercase;letter-spacing:.08em;color:var(--green);margin-bottom:6px">After Retirement</div>
