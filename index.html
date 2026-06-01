@@ -141,7 +141,7 @@ select.inp{appearance:none;-webkit-appearance:none;background-image:url("data:im
   </div>
   <div class="g2" style="margin-top:0">
     <div class="mc"><div class="lbl">Liquid Assets</div><div class="lg" id="d-liquid" style="color:var(--blue)">—</div><div style="font-size:10px;color:var(--sub);margin-top:4px">Cash · Investments · SRS</div></div>
-    <div class="mc"><div style="display:flex;align-items:center;gap:4px;margin-bottom:5px"><span class="lbl" style="margin:0">Illiquid (Net)</span><span class="tip-icon" onclick="this.classList.toggle('open')" style="cursor:pointer;flex-shrink:0">?</span><div class="tip-box"><b>Illiquid (Net) = Total NW − Liquid Assets</b><br/><br/>This covers Property equity, CPF, Insurance and any other non-liquid assets — minus all liabilities (home loan, car loan, credit cards).<br/><br/>Liquid + Illiquid always equals your <b>Total Net Worth</b>.</div></div><div class="lg" id="d-illiquid" style="color:var(--sub)">—</div><div style="font-size:10px;color:var(--sub);margin-top:4px">Property · CPF · Insurance (net)</div></div>
+    <div class="mc"><div style="display:flex;align-items:center;gap:4px;margin-bottom:5px"><span class="lbl" style="margin:0">Illiquid Assets</span><span class="tip-icon" onclick="this.classList.toggle('open')" style="cursor:pointer;flex-shrink:0">?</span><div class="tip-box"><b>Illiquid (Net) = Total NW − Liquid Assets</b><br/><br/>This covers Property equity, CPF, Insurance and any other non-liquid assets — minus all liabilities (home loan, car loan, credit cards).<br/><br/>Liquid + Illiquid always equals your <b>Total Net Worth</b>.</div></div><div class="lg" id="d-illiquid" style="color:var(--sub)">—</div><div style="font-size:10px;color:var(--sub);margin-top:4px">Property · CPF · Insurance (net)</div></div>
   </div>
   <div class="card">
     <div class="rb" style="margin-bottom:8px">
@@ -179,7 +179,6 @@ select.inp{appearance:none;-webkit-appearance:none;background-image:url("data:im
   </div>
   <div class="card"><div class="lbl" style="margin-bottom:10px">Asset Breakdown</div><div id="d-acat"></div><div class="divr"></div><div class="lbl" style="margin-bottom:10px">Liability Breakdown</div><div id="d-lcat"></div></div>
   <div class="card"><div class="lbl" style="margin-bottom:8px">Growth Analysis</div><div id="d-gap"></div></div>
-  <div class="card"><div class="lbl" style="margin-bottom:10px">Personal Goals Achievement</div><div id="d-goals-body"></div></div>
   <div style="padding:4px 20px 8px;font-size:10px;color:var(--muted);text-align:center" id="d-fx"></div>
 </div>
 
@@ -280,7 +279,6 @@ select.inp{appearance:none;-webkit-appearance:none;background-image:url("data:im
       </div>
     </div>
     </div>
-  </div>
   <div id="r-result"></div>
   <div class="card">
     <div style="margin-bottom:14px"><div class="lbl" style="margin:0">Personal Goals</div></div>
@@ -574,6 +572,7 @@ function showView(id){
   window.scrollTo(0,0);
   if(id==='v-dash')renderDash();
   if(id==='v-retire'){loadRetire();renderGoals();}
+  else{const rr=document.getElementById('r-result');if(rr)rr.innerHTML='';}
   if(id==='v-history'){_historySelectMode=false;_historySelected.clear();const b=document.getElementById('h-select-btn'),ba=document.getElementById('h-delete-bar'),s=document.getElementById('h-sub');if(b){b.textContent='Select';b.style.background='';b.style.color='';}if(ba)ba.style.display='none';if(s)s.textContent='All recorded months';renderHistory();}
   if(id==='v-settings')renderSettings();
 }
@@ -677,7 +676,6 @@ function renderDash(){
     document.getElementById('d-acat').innerHTML='<div style="color:var(--sub);font-size:13px">No data yet.</div>';
     document.getElementById('d-lcat').innerHTML='<div style="color:var(--sub);font-size:13px">No data yet.</div>';
     document.getElementById('d-gap').innerHTML='<div style="color:var(--sub);font-size:13px">Add at least 3 months to see growth analysis.</div>';
-    document.getElementById('d-goals-body').innerHTML='';
     document.getElementById('d-fx').textContent='';
     ['c-spark','c-bar','c-pie'].forEach(id=>{const c=document.getElementById(id);if(c){const ctx=c.getContext('2d');ctx.clearRect(0,0,c.width,c.height);}});
     const ps=document.getElementById('pie-month-sel');if(ps)ps.innerHTML='';
@@ -723,7 +721,7 @@ function renderDash(){
   const ps=document.getElementById('pie-month-sel');if(ps){ps.innerHTML=D.months.map(m=>`<option value="${m.id}">${escH(m.label)}</option>`).join('');ps.value=lm.id;setTimeout(renderPie,60);}
   // Category breakdown
   const cA={},cL={};D.accounts.forEach(a=>{const v=toSGD(lm.values[a.id]||0,a.ccy);a.type==='asset'?cA[a.category]=(cA[a.category]||0)+v:cL[a.category]=(cL[a.category]||0)+v;});
-  let aH='';Object.entries(cA).sort((a,b)=>b[1]-a[1]).forEach(([cat,val])=>{const pct=l.assets?Math.round(val/l.assets*100):0;const ex=cat==='CPF'?'<span class="tag tc" style="font-size:9px;margin-left:4px">CPF</span>':'';aH+=`<div style="margin-bottom:10px"><div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:3px"><span style="font-size:13px">${escH(cat)}${ex}</span><span style="font-size:13px;font-weight:700">${fS(val,true)} <span style="color:var(--sub);font-weight:400">(${pct}%)</span></span></div><div class="bar-t"><div class="bar-f" style="width:${pct}%;background:var(--green)"></div></div></div>`;});
+  let aH='';Object.entries(cA).sort((a,b)=>b[1]-a[1]).forEach(([cat,val])=>{const pct=l.assets?Math.round(val/l.assets*100):0;const ex='';aH+=`<div style="margin-bottom:10px"><div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:3px"><span style="font-size:13px">${escH(cat)}${ex}</span><span style="font-size:13px;font-weight:700">${fS(val,true)} <span style="color:var(--sub);font-weight:400">(${pct}%)</span></span></div><div class="bar-t"><div class="bar-f" style="width:${pct}%;background:var(--green)"></div></div></div>`;});
   document.getElementById('d-acat').innerHTML=aH||'<div style="color:var(--sub);font-size:13px">No assets.</div>';
   let lH='';Object.entries(cL).sort((a,b)=>b[1]-a[1]).forEach(([cat,val])=>{const pct=l.liabilities?Math.round(val/l.liabilities*100):0;lH+=`<div style="margin-bottom:10px"><div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:3px"><span style="font-size:13px">${escH(cat)}</span><span style="font-size:13px;font-weight:700">${fS(val,true)} <span style="color:var(--sub);font-weight:400">(${pct}%)</span></span></div><div class="bar-t"><div class="bar-f" style="width:${pct}%;background:var(--red)"></div></div></div>`;});
   document.getElementById('d-lcat').innerHTML=lH||'<div style="color:var(--sub);font-size:13px">No liabilities.</div>';
@@ -739,8 +737,6 @@ function renderDash(){
     document.getElementById('d-gap').innerHTML=gh;
   }else{document.getElementById('d-gap').innerHTML='<div style="color:var(--sub);font-size:13px">Add at least 3 months to see growth analysis.</div>';}
   // Goals
-  const ge=document.getElementById('d-goals-body');
-  if(ge){const cashT=D.accounts.filter(a=>a.type==='asset'&&(a.sub==='bank'||a.category==='Cash & Bank')).reduce((s,a)=>s+toSGD(lm.values[a.id]||0,a.ccy),0);const cfgs={'goal-retire':{current:l.net,color:'var(--blue)'},'goal-emergency':{current:cashT,color:'var(--green)'}};ge.innerHTML=D.goals.map(g=>{const c=cfgs[g.id];if(!c)return'';const tS=toSGD(g.target,g.ccy||'SGD');const pct=Math.min(c.current/tS*100,100);const done=pct>=100;return`<div style="margin-bottom:10px"><div style="display:flex;justify-content:space-between;margin-bottom:3px"><span style="font-size:13px;font-weight:600">${escH(g.name)}</span><span style="font-size:13px;font-weight:700;color:${done?'var(--green)':c.color}">${pct.toFixed(0)}%</span></div><div class="bar-t"><div class="bar-f" style="width:${pct}%;background:${done?'var(--green)':c.color}"></div></div><div style="font-size:11px;color:var(--sub);margin-top:3px">${fS(c.current,true)} of ${fC(g.target,g.ccy||'SGD',true)}</div></div>`;}).join('');}
   const aFX=lm.fxRates||D.fxRates;document.getElementById('d-fx').textContent='FX ('+(lm.fxRates?lm.label:'default')+'): '+Object.entries(aFX).map(([k,v])=>k+'→'+v).join(' · ');
 }
 
@@ -756,7 +752,27 @@ function openBreakdownModal(type){
 }
 
 // ── FX ──
-// ── AUTO FX FETCH ──
+// ── CPF RA AUTO-ZERO (RA only available from age 55) ──
+function validateCPFRA(){
+  const lm=latest();if(!lm)return;
+  // Find RA account row in entry form if open
+  const raInput=document.querySelector('.ei[data-id="cpf-ra"]');
+  if(!raInput)return;
+  // Check if user has entered their age in the retire tab
+  const ageEl=document.getElementById('r-age');
+  const age=ageEl?parseFloat(ageEl.value)||0:0;
+  if(age>0&&age<55){
+    raInput.value='';
+    raInput.placeholder='0 (RA available at 55)';
+    raInput.style.background='var(--s3)';
+    raInput.disabled=true;
+    updPrev();
+  } else {
+    raInput.disabled=false;
+    raInput.placeholder='0';
+    raInput.style.background='';
+  }
+}
 async function fetchLiveFX(){
   try{
     const res=await fetch('https://api.exchangerate-api.com/v4/latest/SGD');
@@ -889,6 +905,7 @@ function buildEntry(vals,restoreAfter=false){
   }); // end liabCats.forEach
   const body=document.getElementById('e-body');body.innerHTML=html;attachDragReorder(body);
   if(restoreAfter)restoreDraft();else updPrev();
+  validateCPFRA();
 }
 
 function entryDelAccount(id){
