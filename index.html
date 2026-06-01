@@ -269,7 +269,17 @@ select.inp{appearance:none;-webkit-appearance:none;background-image:url("data:im
         <input class="inp" id="r-cpf" type="number" inputmode="decimal" placeholder="1200" oninput="calcRetire()" style="margin-top:5px"/>
       </div>
     </div>
-    <div><div class="lbl tip-wrap">Post-Retirement Savings Return Rate %/yr<span class="tip-icon" tabindex="0" onclick="this.classList.toggle('open')">?</span><div class="tip-box"><b>Return on your reinvested savings after retirement.</b><br/><br/>After retiring, any surplus you reinvest (rental income, part-time work etc.) may earn a conservative rate rather than full portfolio return — since you'd be deploying it more cautiously.<br/><br/>Recommended: <b>2–3%</b> conservative.<br/>Set equal to Portfolio Return if fully reinvested in equities.</div></div><input class="inp" id="r-sav-post-rtn" type="number" inputmode="decimal" placeholder="2.5" oninput="calcRetire()"/></div>
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:9px;margin-bottom:9px">
+      <div><div class="lbl tip-wrap">Post-Retirement Savings Return %/yr<span class="tip-icon" tabindex="0" onclick="this.classList.toggle('open')">?</span><div class="tip-box"><b>Return on your reinvested savings after retirement.</b><br/><br/>Recommended: <b>2–3%</b> conservative.<br/>Set equal to Portfolio Return if fully reinvested in equities.</div></div><input class="inp" id="r-sav-post-rtn" type="number" inputmode="decimal" placeholder="2.5" oninput="calcRetire()"/></div>
+      <div>
+        <div class="lbl tip-wrap">Reduce expenses after 65?<span class="tip-icon" tabindex="0" onclick="this.classList.toggle('open')">?</span><div class="tip-box"><b>No = most conservative estimate (recommended).</b><br/><br/>Keeping expenses flat assumes your costs don't drop after 65 — this gives you the largest required nest egg and the safest plan.<br/><br/><b>Yes</b> applies a 15% reduction after 65, reflecting that home loans are typically paid off by then. However healthcare costs rise, so the actual saving is modest.<br/><br/>If in doubt, select <b>No</b>.</div></div>
+        <div class="tgg" style="margin-top:5px">
+          <button id="r-exp65-no" class="tg tga" onclick="setExp65(false)" style="font-size:13px">No</button>
+          <button id="r-exp65-yes" class="tg" onclick="setExp65(true)" style="font-size:13px">Yes (−15%)</button>
+        </div>
+      </div>
+    </div>
+    </div>
   </div>
   <div id="r-result"></div>
   <div class="card">
@@ -1009,6 +1019,17 @@ function attachDragReorder(container){
 }
 
 // ── RETIREMENT ──
+// ── RETIRE HELPERS ──
+let _exp65Reduce=false;
+function setExp65(val){
+  _exp65Reduce=val;
+  const yBtn=document.getElementById('r-exp65-yes');
+  const nBtn=document.getElementById('r-exp65-no');
+  if(yBtn){yBtn.className='tg'+(val?' tga':'');}
+  if(nBtn){nBtn.className='tg'+(!val?' tga':'');}
+  calcRetire();
+}
+
 function loadRetire(){
   const r=D.retire;
   const map={'r-age':r.age,'r-ret':r.retireAge,'r-life':r.lifeExp,'r-rtn':r.returnPct,
@@ -1035,6 +1056,8 @@ function calcRetire(){
   const inf=(parseFloat(document.getElementById('r-inf').value)||2.5)/100;
   const cpf=parseFloat(document.getElementById('r-cpf').value)||0;
   const expPost=parseFloat(document.getElementById('r-exp').value)||4000;
+  const _reduceExp65=document.getElementById('r-exp65-yes')&&document.getElementById('r-exp65-yes').classList.contains('tga');
+  const expPost65=_reduceExp65?expPost*0.85:expPost;
   const expPre=parseFloat(document.getElementById('r-exp-pre').value)||0;
   const incPre=parseFloat(document.getElementById('r-inc-pre').value)||0;
   const incPost=parseFloat(document.getElementById('r-inc-post').value)||0;
@@ -1078,29 +1101,27 @@ function calcRetire(){
   const savingsGrowth=msr>0 ? ems*(Math.pow(1+msr,months)-1)/msr : ems*months;
   let futNW=portfolioGrowth+savingsGrowth;
 
-  const infExp=expPost*Math.pow(1+inf,ytr);
+  // Two-phase expenses: retire→65 uses expPost, 65+ uses expPost65
+  const infExp=expPost*Math.pow(1+inf,ytr);       // retire→65 expenses (inflation adj.)
+  const infExp65=expPost65*Math.pow(1+inf,ytr);   // 65+ expenses (inflation adj.)
   const cpfM=rAge>=65?cpf:0;
-
-  // Issue 2 fix: savPost reinvested at savPostRtn reduces the effective drawdown
-  // Effective monthly drawdown from portfolio = expenses - income - CPF - savPost(reinvested)
   const nd=Math.max(infExp-incPost-cpfM-savPost,0);
 
-  // Real return (above inflation) for required nest egg PV calculation
   const rr=(1+ret)/(1+inf)-1;
   const mrr=rr/12;
 
-  // Issue 3 fix: discount pv2 using real return rr consistently
   let req;
   if(rAge<65&&yir>0){
     const y1=Math.min(65-rAge,yir),y2=Math.max(yir-y1,0);
-    const d1=Math.max(infExp-incPost-savPost,0);         // pre-65 drawdown (no CPF Life)
-    const d2=Math.max(infExp-incPost-cpf-savPost,0);     // post-65 drawdown (with CPF Life)
+    const d1=Math.max(infExp-incPost-savPost,0);          // retire→65: expPost, no CPF Life
+    const d2=Math.max(infExp65-incPost-cpf-savPost,0);    // 65+: expPost65, with CPF Life
     const pv1=mrr<=0?d1*y1*12:d1*(1-Math.pow(1+mrr,-y1*12))/mrr;
     const pv2=mrr<=0?d2*y2*12:d2*(1-Math.pow(1+mrr,-y2*12))/mrr;
-    // Discount pv2 back to retirement date using real return (issue 3 fix)
     req=pv1+(y2>0?pv2/Math.pow(1+rr,y1):0);
   } else {
-    req=mrr<=0?nd*yir*12:nd*(1-Math.pow(1+mrr,-yir*12))/mrr;
+    // Retiring at 65+ — use expPost65 and CPF Life from day 1
+    const nd65=Math.max(infExp65-incPost-cpfM-savPost,0);
+    req=mrr<=0?nd65*yir*12:nd65*(1-Math.pow(1+mrr,-yir*12))/mrr;
   }
 
   const surplus=futNW-req;
@@ -1121,12 +1142,12 @@ function calcRetire(){
     if(ta<65&&ry>0){
       const y1b=Math.min(65-ta,ry),y2b=Math.max(ry-y1b,0);
       const d1b=Math.max(ie-incPost-savPost,0);
-      const d2b=Math.max(ie-incPost-cpf-savPost,0);
+      const d2b=Math.max(expPost65*Math.pow(1+inf,ta-age)-incPost-cpf-savPost,0);
       const pv1b=mrr<=0?d1b*y1b*12:d1b*(1-Math.pow(1+mrr,-y1b*12))/mrr;
       const pv2b=mrr<=0?d2b*y2b*12:d2b*(1-Math.pow(1+mrr,-y2b*12))/mrr;
       r2=pv1b+(y2b>0?pv2b/Math.pow(1+rr,y1b):0);
     } else {
-      const draw=Math.max(ie-incPost-cpfA-savPost,0);
+      const draw=Math.max(expPost65*Math.pow(1+inf,ta-age)-incPost-cpfA-savPost,0);
       r2=mrr<=0?draw*ry*12:draw*(1-Math.pow(1+mrr,-ry*12))/mrr;
     }
     if(p2>=r2){earliest=ta;break;}
@@ -1155,6 +1176,7 @@ function calcRetire(){
   <div class="divr"></div>
   <div style="font-size:10px;font-weight:800;text-transform:uppercase;letter-spacing:.08em;color:var(--green);margin-bottom:6px">After Retirement</div>
   <div class="row"><span style="font-size:13px;color:var(--sub)">Monthly expenses at ${rAge} (inflation adj.)</span><span style="font-weight:700">${fS(infExp,true)}/mo</span></div>
+  ${_reduceExp65?`<div class="row"><span style="font-size:13px;color:var(--sub)">Monthly expenses after 65 (−15%)</span><span style="font-weight:700;color:var(--green)">${fS(infExp65,true)}/mo</span></div>`:''}
   ${savPost>0?`<div class="row"><span style="font-size:13px;color:var(--sub)">Reinvested savings (${(savPostRtn*100).toFixed(1)}%/yr)</span><span style="font-weight:700;color:var(--blue)">−${fS(savPost,true)}/mo</span></div>`:''}
   ${incPost>0?`<div class="row"><span style="font-size:13px;color:var(--sub)">Other income</span><span style="font-weight:700;color:var(--green)">−${fS(incPost,true)}/mo</span></div>`:''}
   ${cpf>0?`<div class="row"><span style="font-size:13px;color:var(--sub)">CPF Life (from 65)</span><span style="font-weight:700;color:var(--green)">−${fS(cpf,true)}/mo</span></div>`:''}
