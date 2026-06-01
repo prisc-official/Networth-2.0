@@ -652,7 +652,7 @@ function drawSpark(id,data,labels){
   const c=document.getElementById(id);if(!c||data.length<2)return;
   const dpr=devicePixelRatio||1;
   // Minimum 60px per data point so labels never overlap
-  const minW=Math.max(c.parentElement.offsetWidth||360, data.length*60);
+  const minW=Math.max((c.parentElement&&c.parentElement.offsetWidth)||360, data.length*60);
   c.style.width=minW+'px';
   // Scroll to rightmost (latest) on load
   const wrap=document.getElementById('spark-wrap');
@@ -699,7 +699,7 @@ function drawBar(){
   const pts=_chartView==='yearly'?getYearlyData():sortedMonths().map(m=>({label:m.label,...calcNW(m.values)}));
   if(!pts.length)return;
   // Minimum 60px per bar so labels never overlap
-  const minW=Math.max(c.parentElement.offsetWidth||360, pts.length*60);
+  const minW=Math.max((c.parentElement&&c.parentElement.offsetWidth)||360, pts.length*60);
   c.style.width=minW+'px';
   const wrap=document.getElementById('bar-wrap');
   if(wrap){wrap.style.width=minW+'px';setTimeout(()=>{const sc=wrap.parentElement;if(sc)sc.scrollLeft=sc.scrollWidth;},60);}
@@ -834,6 +834,7 @@ function openBreakdownModal(type){
 // ── CPF RA AUTO-ZERO (RA only available from age 55) ──
 function validateCPFRA(){
   const lm=latest();if(!lm)return;
+  if(!document.querySelector('.ei'))return; // entry form not open
   // Find RA account row in entry form if open
   const raInput=document.querySelector('.ei[data-id="cpf-ra"]');
   if(!raInput)return;
@@ -1141,14 +1142,14 @@ function setRetireMode(mode){
   const btnDec=document.getElementById('r-mode-dec');
   const sub=document.getElementById('r-mode-sub');
   if(mode==='accumulate'){
-    if(acc)acc.style.display='';
+    if(acc)acc.style.display='block';
     if(dec)dec.style.display='none';
     if(btnAcc)btnAcc.className='tg tga';
     if(btnDec)btnDec.className='tg';
     if(sub)sub.textContent='Can I afford to retire?';
   } else {
     if(acc)acc.style.display='none';
-    if(dec)dec.style.display='';
+    if(dec)dec.style.display='block';
     if(btnAcc)btnAcc.className='tg';
     if(btnDec)btnDec.className='tg tga';
     if(sub)sub.textContent='How long will my money last?';
@@ -1156,7 +1157,7 @@ function setRetireMode(mode){
   }
 }
 
-function calcDecum(){
+function calcDecum(){try{
   // Pull all values from accumulation inputs
   const age    = parseFloat(document.getElementById('r-age').value)||35;
   const rAge   = parseFloat(document.getElementById('r-ret').value)||55;
@@ -1165,7 +1166,7 @@ function calcDecum(){
   const inf    = (parseFloat(document.getElementById('r-inf').value)||2.5)/100;
   const cpf    = parseFloat(document.getElementById('r-cpf').value)||0;
   const exp    = parseFloat(document.getElementById('r-exp').value)||4000;
-  const exp65  = _reduceExp65 ? exp*0.85 : exp;  // reduced expenses after 65
+  const exp65  = _exp65Reduce ? exp*0.85 : exp;  // reduced expenses after 65
   const inc    = parseFloat(document.getElementById('r-inc-post').value)||0;
   const savRtn = (parseFloat(document.getElementById('r-sav-rtn').value)||2.5)/100;
   const sav    = parseFloat(document.getElementById('r-sav').value)||0;
@@ -1192,12 +1193,12 @@ function calcDecum(){
   const sumEl=document.getElementById('dc-summary');
   if(sumEl) sumEl.innerHTML=
     `<b>Starting at age ${rAge} with projected ${fS(portfolioAtRetire,true)}</b><br/>` +
-    `Expenses: ${fS(exp,true)}/mo${_reduceExp65?` → ${fS(exp65,true)}/mo after 65`:''} · Return: ${(ret*100).toFixed(1)}%/yr · Inflation: ${(inf*100).toFixed(1)}%/yr` +
+    `Expenses: ${fS(exp,true)}/mo${_exp65Reduce?` → ${fS(exp65,true)}/mo after 65`:''} · Return: ${(ret*100).toFixed(1)}%/yr · Inflation: ${(inf*100).toFixed(1)}%/yr` +
     (cpf>0?` · CPF Life: ${fS(cpf,true)}/mo from 65`:'') +
     (inc>0?` · Other income: ${fS(inc,true)}/mo`:'');
 
   if(!portfolioAtRetire){
-    document.getElementById('dc-result').innerHTML='<div class="card" style="color:var(--sub);font-size:13px;text-align:center">Add retirement inputs in Accumulation mode first.</div>';
+    document.getElementById('dc-result').innerHTML='<div class="card" style="text-align:center;padding:20px"><div style="font-size:32px;margin-bottom:8px">📊</div><div style="font-size:14px;font-weight:700;margin-bottom:6px">No portfolio data yet</div><div style="font-size:13px;color:var(--sub)">Add a month entry in <b>+ Month</b>, then fill in your retirement details in <b>Accumulation</b> mode.</div></div>';
     return;
   }
 
@@ -1238,7 +1239,7 @@ function calcDecum(){
   </div>
   <div class="row"><span style="font-size:13px;color:var(--sub)">Projected portfolio at ${rAge}</span><span style="font-weight:700">${fS(portfolioAtRetire,true)}</span></div>
   <div class="row"><span style="font-size:13px;color:var(--sub)">Monthly expenses at ${rAge}</span><span style="font-weight:700">${fS(exp,true)}/mo</span></div>
-  ${_reduceExp65?`<div class="row"><span style="font-size:13px;color:var(--sub)">Monthly expenses after 65 (−15%)</span><span style="font-weight:700;color:var(--green)">${fS(exp65,true)}/mo</span></div>`:''}
+  ${_exp65Reduce?`<div class="row"><span style="font-size:13px;color:var(--sub)">Monthly expenses after 65 (−15%)</span><span style="font-weight:700;color:var(--green)">${fS(exp65,true)}/mo</span></div>`:''}
   <div class="row"><span style="font-size:13px;color:var(--sub)">Net monthly drawdown at ${rAge}</span><span style="font-weight:700;color:var(--red)">${fS(netDrawNow,true)}/mo</span></div>
   <div class="row"><span style="font-size:13px;color:var(--sub)">Withdrawal rate</span><span style="font-weight:700;color:${swrOk?'var(--green)':'var(--red)'}">${swr.toFixed(1)}% ${swrOk?'✓ Safe (≤4%)':'⚠ High (>4%)'}</span></div>
   <div class="divr"></div>
@@ -1247,7 +1248,7 @@ function calcDecum(){
   <div class="row" style="border-bottom:none"><span style="font-size:13px;color:var(--sub)">Years of funding</span><span style="font-weight:700">${yearsLast.toFixed(1)} yrs</span></div>`
     :`<div class="row" style="border-bottom:none"><span style="font-size:13px;color:var(--sub)">Portfolio lasts beyond</span><span style="font-weight:800;font-size:15px;color:var(--green)">age 100 ✓</span></div>`}
   </div>`;
-}
+}catch(err){console.error('calcDecum error:',err);}}
 let _exp65Reduce=false;
 let _propInPortfolio=false; // default: exclude property (conservative)
 
@@ -1285,7 +1286,7 @@ function loadRetire(){
   }
   calcRetire();
 }
-function calcRetire(){
+function calcRetire(){try{
   const age=parseFloat(document.getElementById('r-age').value)||35;
   const rAge=parseFloat(document.getElementById('r-ret').value)||55;
   const life=parseFloat(document.getElementById('r-life').value)||85;
@@ -1452,10 +1453,11 @@ function calcRetire(){
   <div class="row" style="border-bottom:none"><span style="font-size:13px;color:var(--sub)">Net monthly drawdown from portfolio</span><span style="font-weight:700;color:var(--red)">${fS(nd,true)}/mo</span></div>
   </div>`;
   renderGoals();
-}
+}catch(err){console.error('calcRetire error:',err);}}
 
 // ── GOALS ──
 function renderGoals(){
+  if(!document.getElementById('goals-body'))return;
   const lm=latest(),curSGD=lm?calcNW(lm.values).net:0;
   const cashT=lm?D.accounts.filter(a=>a.type==='asset'&&(a.sub==='bank'||a.category==='Cash & Bank')).reduce((s,a)=>s+toSGD(lm.values[a.id]||0,a.ccy),0):0;
   const cfg={'goal-retire':{icon:'🎯',desc:'Target nest egg for retirement',current:curSGD,color:'var(--blue)',hint:'Measured against total net worth'},'goal-emergency':{icon:'🛡️',desc:'3–6 months expenses in liquid cash',current:cashT,color:'var(--green)',hint:'Measured against Cash & Bank accounts'}};
@@ -1912,6 +1914,7 @@ function checkWelcome(){
 
 // ── INIT ──
 window.addEventListener('load',()=>{
+  try{
   // Always start with clean toast state
   const t=document.getElementById('toast');
   if(t){t.textContent='';t.classList.remove('show');}
@@ -1930,6 +1933,7 @@ window.addEventListener('load',()=>{
       drawBar();
     }
   });
+  }catch(err){console.error('Init error:',err);}
 });
 </script>
 </body>
