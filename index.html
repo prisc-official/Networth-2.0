@@ -248,8 +248,8 @@ select.inp{appearance:none;-webkit-appearance:none;background-image:url("data:im
   <div class="card" style="border-left:3px solid var(--blue)">
     <div class="lbl" style="margin-bottom:10px;color:var(--blue)">Before Retirement</div>
     <div style="display:grid;grid-template-columns:1fr 1fr;gap:9px;margin-bottom:9px">
-      <div><div class="lbl">Monthly Take-Home Income</div><input class="inp" id="r-inc-pre" type="number" inputmode="decimal" placeholder="8000" oninput="calcRetire()"/></div>
-      <div><div class="lbl">Monthly Savings</div><input class="inp" id="r-sav" type="number" inputmode="decimal" placeholder="2500" oninput="calcRetire()"/></div>
+      <div><div class="lbl tip-wrap">Monthly Take-Home Income<span class="tip-icon" tabindex="0" onclick="this.classList.toggle('open')">?</span><div class="tip-box"><b>Monthly take-home pay after CPF deductions.</b><br/><br/>You may include:<br/>• Fixed monthly salary (after CPF)<br/>• Projected annual bonus ÷ 12<br/>• Commission (use a conservative average)<br/><br/><b>Example:</b> Salary S$6,000 + avg bonus S$12,000/yr = S$6,000 + S$1,000 = <b>S$7,000/mo</b></div></div><input class="inp" id="r-inc-pre" type="number" inputmode="decimal" placeholder="8000" oninput="calcRetire()"/></div>
+      <div><div class="lbl tip-wrap">Monthly Savings<span class="tip-icon" tabindex="0" onclick="this.classList.toggle('open')">?</span><div class="tip-box"><b>Amount you invest or save each month.</b><br/><br/>If you fill in Income and Expenses above, this field auto-calculates as Income − Expenses.<br/><br/>You can override it manually — it will turn white when you edit it directly.</div></div><input class="inp" id="r-sav" type="number" inputmode="decimal" placeholder="2500" oninput="this._manualEdit=true;this.style.background='';calcRetire()"/></div>
     </div>
     <div><div class="lbl">Monthly Expenses</div><input class="inp" id="r-exp-pre" type="number" inputmode="decimal" placeholder="4000" oninput="calcRetire()"/></div>
   </div>
@@ -1007,42 +1007,139 @@ function attachDragReorder(container){
 // ── RETIREMENT ──
 function loadRetire(){const r=D.retire,map={'r-age':r.age,'r-ret':r.retireAge,'r-life':r.lifeExp,'r-rtn':r.returnPct,'r-inf':r.inflation,'r-sav':r.savings,'r-cpf':r.cpfPayout,'r-exp':r.expenses,'r-exp-pre':r.expensesPre||0,'r-inc-pre':r.incomePre||0,'r-inc-post':r.incomePost||0,'r-sav-post':r.savingsPost||0};Object.entries(map).forEach(([id,val])=>{const el=document.getElementById(id);if(el&&val)el.value=val;});calcRetire();}
 function calcRetire(){
-  const age=parseFloat(document.getElementById('r-age').value)||35,rAge=parseFloat(document.getElementById('r-ret').value)||55,life=parseFloat(document.getElementById('r-life').value)||85;
-  const ret=(parseFloat(document.getElementById('r-rtn').value)||5)/100,inf=(parseFloat(document.getElementById('r-inf').value)||2.5)/100;
-  const sav=parseFloat(document.getElementById('r-sav').value)||0,cpf=parseFloat(document.getElementById('r-cpf').value)||0;
-  const expPost=parseFloat(document.getElementById('r-exp').value)||4000,expPre=parseFloat(document.getElementById('r-exp-pre').value)||0;
-  const incPre=parseFloat(document.getElementById('r-inc-pre').value)||0,incPost=parseFloat(document.getElementById('r-inc-post').value)||0,savPost=parseFloat(document.getElementById('r-sav-post').value)||0;
-  D.retire={age,retireAge:rAge,lifeExp:life,returnPct:ret*100,inflation:inf*100,savings:sav,cpfPayout:cpf,expenses:expPost,expensesPre:expPre,incomePre:incPre,incomePost:incPost,savingsPost:savPost};saveState();
-  const curNW=latest()?calcNW(latest().values).net:0,ytr=Math.max(rAge-age,0),yir=Math.max(life-rAge,0),mr=ret/12;
+  const age=parseFloat(document.getElementById('r-age').value)||35;
+  const rAge=parseFloat(document.getElementById('r-ret').value)||55;
+  const life=parseFloat(document.getElementById('r-life').value)||85;
+  const ret=(parseFloat(document.getElementById('r-rtn').value)||5)/100;
+  const inf=(parseFloat(document.getElementById('r-inf').value)||2.5)/100;
+  const cpf=parseFloat(document.getElementById('r-cpf').value)||0;
+  const expPost=parseFloat(document.getElementById('r-exp').value)||4000;
+  const expPre=parseFloat(document.getElementById('r-exp-pre').value)||0;
+  const incPre=parseFloat(document.getElementById('r-inc-pre').value)||0;
+  const incPost=parseFloat(document.getElementById('r-inc-post').value)||0;
+  const savPost=parseFloat(document.getElementById('r-sav-post').value)||0;
+
+  // B) Auto-compute monthly savings if income and expenses are filled
+  let sav=parseFloat(document.getElementById('r-sav').value)||0;
+  if(incPre>0&&expPre>0){
+    const autoSav=Math.max(incPre-expPre,0);
+    const savInput=document.getElementById('r-sav');
+    // Only auto-fill if user hasn't manually entered a value
+    if(!savInput._manualEdit){
+      sav=autoSav;
+      savInput.value=autoSav>0?autoSav:'';
+      savInput.style.background='var(--green-dim)';
+      savInput.title='Auto-calculated from income − expenses';
+    }
+  }
+
+  D.retire={age,retireAge:rAge,lifeExp:life,returnPct:ret*100,inflation:inf*100,
+    savings:sav,cpfPayout:cpf,expenses:expPost,expensesPre:expPre,
+    incomePre:incPre,incomePost:incPost,savingsPost:savPost};
+  saveState();
+
+  const curNW=latest()?calcNW(latest().values).net:0;
+  const ytr=Math.max(rAge-age,0);
+  const yir=Math.max(life-rAge,0);
+  const mr=ret/12;
   const ems=incPre>0?(incPre-expPre-sav>=0?sav:Math.max(incPre-expPre,0)):sav;
-  let futNW=curNW;for(let i=0;i<ytr*12;i++)futNW=futNW*(1+mr)+ems;
-  const infExp=expPost*Math.pow(1+inf,ytr),cpfM=rAge>=65?cpf:0,nd=Math.max(infExp-incPost-cpfM-savPost,0);
+
+  // Project NW to target retirement age
+  let futNW=curNW;
+  for(let i=0;i<ytr*12;i++) futNW=futNW*(1+mr)+ems;
+
+  const infExp=expPost*Math.pow(1+inf,ytr);
+  const cpfM=rAge>=65?cpf:0;
+  const nd=Math.max(infExp-incPost-cpfM-savPost,0);
   const rr=(1+ret)/(1+inf)-1,mrr=rr/12;
+
   let req;
-  if(rAge<65&&yir>0){const y1=Math.min(65-rAge,yir),y2=Math.max(yir-y1,0),d1=Math.max(infExp-incPost-savPost,0),d2=Math.max(infExp-incPost-cpf-savPost,0);const pv1=mrr<=0?d1*y1*12:d1*(1-Math.pow(1+mrr,-y1*12))/mrr,pv2=mrr<=0?d2*y2*12:d2*(1-Math.pow(1+mrr,-y2*12))/mrr;req=pv1+pv2/Math.pow(1+ret,y1);}
-  else{req=mrr<=0?nd*yir*12:nd*(1-Math.pow(1+mrr,-yir*12))/mrr;}
-  const surplus=futNW-req,pct=Math.min(req>0?futNW/req*100:100,150),ok=surplus>=0,close=pct>=80;
-  let earliest=null;for(let ta=age+1;ta<=life;ta++){let p2=curNW;for(let i=0;i<(ta-age)*12;i++)p2=p2*(1+mr)+ems;const ie=expPost*Math.pow(1+inf,ta-age),cpfA=ta>=65?cpf:0,draw=Math.max(ie-incPost-cpfA-savPost,0),ry=life-ta,r2=mrr<=0?draw*ry*12:draw*(1-Math.pow(1+mrr,-ry*12))/mrr;if(p2>=r2){earliest=ta;break;}}
-  const vc=ok?'v-ok':close?'v-warn':'v-no',vi=ok?'✅':close?'⚠️':'❌',vt=ok?"You're on track!":close?"Almost there":"Shortfall detected",vcol=ok?'var(--green)':close?'var(--gold)':'var(--red)';
+  if(rAge<65&&yir>0){
+    const y1=Math.min(65-rAge,yir),y2=Math.max(yir-y1,0);
+    const d1=Math.max(infExp-incPost-savPost,0);
+    const d2=Math.max(infExp-incPost-cpf-savPost,0);
+    const pv1=mrr<=0?d1*y1*12:d1*(1-Math.pow(1+mrr,-y1*12))/mrr;
+    const pv2=mrr<=0?d2*y2*12:d2*(1-Math.pow(1+mrr,-y2*12))/mrr;
+    req=pv1+pv2/Math.pow(1+ret,y1);
+  } else {
+    req=mrr<=0?nd*yir*12:nd*(1-Math.pow(1+mrr,-yir*12))/mrr;
+  }
+
+  const surplus=futNW-req;
+  const pct=Math.min(req>0?futNW/req*100:100,150);
+  const ok=surplus>=0,close=pct>=80;
+
+  // C) Fixed earliest age scan — start from current age (not age+1)
+  // Uses same monthly savings (ems) and same required nest egg formula
+  let earliest=null;
+  for(let ta=age;ta<=life;ta++){
+    // Project NW to test age ta
+    let p2=curNW;
+    for(let i=0;i<(ta-age)*12;i++) p2=p2*(1+mr)+ems;
+    // Required nest egg at age ta
+    const ie=expPost*Math.pow(1+inf,ta-age);
+    const cpfA=ta>=65?cpf:0;
+    const draw=Math.max(ie-incPost-cpfA-savPost,0);
+    const ry=Math.max(life-ta,0);
+    let r2;
+    if(ta<65&&ry>0){
+      const y1b=Math.min(65-ta,ry),y2b=Math.max(ry-y1b,0);
+      const d1b=Math.max(ie-incPost-savPost,0);
+      const d2b=Math.max(ie-incPost-cpf-savPost,0);
+      const pv1b=mrr<=0?d1b*y1b*12:d1b*(1-Math.pow(1+mrr,-y1b*12))/mrr;
+      const pv2b=mrr<=0?d2b*y2b*12:d2b*(1-Math.pow(1+mrr,-y2b*12))/mrr;
+      r2=pv1b+pv2b/Math.pow(1+ret,y1b);
+    } else {
+      r2=mrr<=0?draw*ry*12:draw*(1-Math.pow(1+mrr,-ry*12))/mrr;
+    }
+    if(p2>=r2){earliest=ta;break;}
+  }
+
+  const vc=ok?'v-ok':close?'v-warn':'v-no';
+  const vi=ok?'✅':close?'⚠️':'❌';
+  const vt=ok?"You're on track!":close?"Almost there":"Shortfall detected";
+  const vcol=ok?'var(--green)':close?'var(--gold)':'var(--red)';
   const preNcf=incPre>0?incPre-expPre-ems:null;
-  document.getElementById('r-result').innerHTML=`<div class="card"><div class="verdict ${vc}" style="margin-bottom:12px"><div style="font-family:'DM Sans',sans-serif;font-size:17px;font-weight:800;margin-bottom:4px;letter-spacing:-.2px">${vi} ${vt}</div><div style="font-size:13px;color:${vcol}">${ok?'Keep building.':close?'Small changes can close the gap.':'Consider increasing savings or adjusting timeline.'}</div></div>
+
+  document.getElementById('r-result').innerHTML=`<div class="card">
+  <div class="verdict ${vc}" style="margin-bottom:12px">
+    <div style="font-family:'DM Sans',sans-serif;font-size:17px;font-weight:800;margin-bottom:4px;letter-spacing:-.2px">${vi} ${vt}</div>
+    <div style="font-size:13px;color:${vcol}">${ok?'Keep building.':close?'Small changes can close the gap.':'Consider increasing savings or adjusting timeline.'}</div>
+  </div>
   <div style="font-size:10px;font-weight:800;text-transform:uppercase;letter-spacing:.08em;color:var(--blue);margin-bottom:6px">Before Retirement</div>
-  ${incPre>0?`<div class="row"><span style="font-size:13px;color:var(--sub)">Monthly income</span><span style="font-weight:700">${fS(incPre,true)}</span></div><div class="row"><span style="font-size:13px;color:var(--sub)">Monthly expenses</span><span style="font-weight:700">${fS(expPre,true)}</span></div><div class="row"><span style="font-size:13px;color:var(--sub)">Monthly savings</span><span style="font-weight:700;color:var(--blue)">${fS(ems,true)}</span></div>${preNcf!==null?`<div class="row"><span style="font-size:13px;color:var(--sub)">Net cashflow</span><span class="${preNcf>=0?'pos':'neg'}" style="font-weight:700">${fS(preNcf,true)}</span></div>`:''}`:`<div class="row"><span style="font-size:13px;color:var(--sub)">Monthly savings</span><span style="font-weight:700;color:var(--blue)">${fS(ems,true)}</span></div>`}
+  ${incPre>0?`
+    <div class="row"><span style="font-size:13px;color:var(--sub)">Monthly income</span><span style="font-weight:700">${fS(incPre,true)}</span></div>
+    <div class="row"><span style="font-size:13px;color:var(--sub)">Monthly expenses</span><span style="font-weight:700">${fS(expPre,true)}</span></div>
+    <div class="row"><span style="font-size:13px;color:var(--sub)">Monthly savings</span><span style="font-weight:700;color:var(--blue)">${fS(ems,true)}</span></div>
+    ${preNcf!==null?`<div class="row"><span style="font-size:13px;color:var(--sub)">Net cashflow</span><span class="${preNcf>=0?'pos':'neg'}" style="font-weight:700">${fS(preNcf,true)}</span></div>`:''}
+  `:`<div class="row"><span style="font-size:13px;color:var(--sub)">Monthly savings</span><span style="font-weight:700;color:var(--blue)">${fS(ems,true)}</span></div>`}
   <div class="row"><span style="font-size:13px;color:var(--sub)">Current NW</span><span style="font-weight:700">${fS(curNW,true)}</span></div>
   <div class="row" style="border-bottom:none"><span style="font-size:13px;color:var(--sub)">Projected at age ${rAge}</span><span style="font-weight:700;color:var(--blue)">${fS(futNW,true)}</span></div>
   <div class="divr"></div>
   <div style="font-size:10px;font-weight:800;text-transform:uppercase;letter-spacing:.08em;color:var(--green);margin-bottom:6px">After Retirement</div>
-  <div class="row"><span style="font-size:13px;color:var(--sub)">Total expenses (inflated to ${rAge})</span><span style="font-weight:700">${fS(infExp,true)}/mo</span></div>
+  <div class="row"><span style="font-size:13px;color:var(--sub)">Monthly expenses at ${rAge} (inflation adj.)</span><span style="font-weight:700">${fS(infExp,true)}/mo</span></div>
   ${savPost>0?`<div class="row"><span style="font-size:13px;color:var(--sub)">Ongoing savings</span><span style="font-weight:700;color:var(--blue)">${fS(savPost,true)}/mo</span></div>`:''}
   ${incPost>0?`<div class="row"><span style="font-size:13px;color:var(--sub)">Other income</span><span style="font-weight:700;color:var(--green)">−${fS(incPost,true)}/mo</span></div>`:''}
   ${cpf>0?`<div class="row"><span style="font-size:13px;color:var(--sub)">CPF Life (from 65)</span><span style="font-weight:700;color:var(--green)">−${fS(cpf,true)}/mo</span></div>`:''}
-  <div class="row"><span style="font-size:13px;color:var(--sub)">Net drawdown</span><span style="font-weight:700;color:var(--red)">${fS(nd,true)}/mo</span></div>
+  <div class="row"><span style="font-size:13px;color:var(--sub)">Net monthly drawdown</span><span style="font-weight:700;color:var(--red)">${fS(nd,true)}/mo</span></div>
   <div class="divr"></div>
   <div class="row"><span style="font-size:13px;color:var(--sub)">Required nest egg</span><span style="font-weight:700;color:var(--gold)">${fS(req,true)}</span></div>
   <div class="row"><span style="font-size:13px;color:var(--sub)">Projected at retirement</span><span style="font-weight:700;color:var(--blue)">${fS(futNW,true)}</span></div>
   <div class="row"><span style="font-size:13px;color:var(--sub)">Surplus / (Shortfall)</span><span class="${surplus>=0?'pos':'neg'}" style="font-weight:700">${fS(surplus,true)}</span></div>
-  <div style="margin-top:14px"><div style="display:flex;justify-content:space-between;margin-bottom:5px"><span style="font-size:12px;color:var(--sub)">Funding progress</span><span style="font-size:12px;font-weight:700;color:${vcol}">${pct.toFixed(0)}%</span></div><div class="bar-t" style="height:10px;border-radius:6px"><div class="bar-f" style="width:${pct}%;background:${vcol};height:10px;border-radius:6px"></div></div></div>
-  ${earliest?`<div style="margin-top:14px;padding:14px 16px;background:var(--blue-dim);border-radius:14px;border:1px solid var(--blue-mid)"><div style="font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.08em;color:var(--sub);margin-bottom:6px">Earliest Retire Age</div><div style="font-family:'DM Sans',sans-serif;font-size:32px;font-weight:800;color:var(--blue);letter-spacing:-.5px;">${earliest} <span style="font-size:15px;color:var(--sub);font-weight:600">years old</span></div><div style="font-size:13px;color:var(--sub);margin-top:4px">${earliest<=rAge?'Earlier than planned!':earliest-rAge+' yr(s) later than target'}</div></div>`:''}
+  <div style="margin-top:14px">
+    <div style="display:flex;justify-content:space-between;margin-bottom:5px">
+      <span style="font-size:12px;color:var(--sub)">Funding progress</span>
+      <span style="font-size:12px;font-weight:700;color:${vcol}">${pct.toFixed(0)}%</span>
+    </div>
+    <div class="bar-t" style="height:10px;border-radius:6px">
+      <div class="bar-f" style="width:${pct}%;background:${vcol};height:10px;border-radius:6px"></div>
+    </div>
+  </div>
+  ${earliest!=null?`<div style="margin-top:14px;padding:14px 16px;background:var(--blue-dim);border-radius:14px;border:1px solid var(--blue-mid)">
+    <div style="font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.08em;color:var(--sub);margin-bottom:6px">Earliest Retire Age</div>
+    <div style="font-family:'DM Sans',sans-serif;font-size:32px;font-weight:800;color:var(--blue);letter-spacing:-.5px;">${earliest} <span style="font-size:15px;color:var(--sub);font-weight:600">years old</span></div>
+    <div style="font-size:13px;color:var(--sub);margin-top:4px">${earliest<=rAge?'Earlier than or at your target! 🎉':earliest-rAge+' yr(s) later than target'}</div>
+  </div>`:''}
   </div>`;
   renderGoals();
 }
