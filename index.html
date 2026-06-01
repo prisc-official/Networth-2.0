@@ -141,7 +141,7 @@ select.inp{appearance:none;-webkit-appearance:none;background-image:url("data:im
   </div>
   <div class="g2" style="margin-top:0">
     <div class="mc"><div class="lbl">Liquid Assets</div><div class="lg" id="d-liquid" style="color:var(--blue)">—</div><div style="font-size:10px;color:var(--sub);margin-top:4px">Cash · Investments · SRS</div></div>
-    <div class="mc"><div class="lbl">Illiquid Assets</div><div class="lg" id="d-illiquid" style="color:var(--sub)">—</div><div style="font-size:10px;color:var(--sub);margin-top:4px">Property · CPF · Insurance</div></div>
+    <div class="mc"><div class="lbl">Illiquid (Net)</div><div class="lg" id="d-illiquid" style="color:var(--sub)">—</div><div style="font-size:10px;color:var(--sub);margin-top:4px">Total NW minus liquid</div></div>
   </div>
   <div class="card">
     <div class="rb" style="margin-bottom:8px">
@@ -708,8 +708,10 @@ function renderDash(){
   document.getElementById('d-nw-total').textContent=fS(l.net);document.getElementById('d-nw-total').className=l.net>=0?'pos':'neg';
   document.getElementById('d-nw-noprop').textContent=fS(nwNP);document.getElementById('d-nw-noprop').className=nwNP>=0?'pos':'neg';
   document.getElementById('d-nw-liquid').textContent=fS(nwLQ);document.getElementById('d-nw-liquid').className=nwLQ>=0?'pos':'neg';
-  const liqT=D.accounts.filter(a=>a.type==='asset'&&['bank','inv','srs'].includes(a.sub)).reduce((s,a)=>s+toSGD(lm.values[a.id]||0,a.ccy),0);
-  const illT=D.accounts.filter(a=>a.type==='asset'&&['prop','cpf','ins'].includes(a.sub)).reduce((s,a)=>s+toSGD(lm.values[a.id]||0,a.ccy),0);
+  const liqSubs=['bank','inv','srs'];
+  const liqT=D.accounts.filter(a=>a.type==='asset'&&liqSubs.includes(a.sub)).reduce((s,a)=>s+toSGD(lm.values[a.id]||0,a.ccy),0);
+  // Illiquid = Total NW minus liquid assets (so liquid + illiquid = total NW always)
+  const illT=l.net-liqT;
   document.getElementById('d-liquid').textContent=fS(liqT,true);
   document.getElementById('d-illiquid').textContent=fS(illT,true);
   // Charts
