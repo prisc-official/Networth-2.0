@@ -719,8 +719,13 @@ function renderDash(){
   setTimeout(()=>drawSpark('c-spark',nwData,nwLabels),50);
   const yb=document.getElementById('btn-yearly');if(yb)yb.style.display=D.months.length>12?'block':'none';
   setTimeout(()=>drawBar(),80);
-  // Pie
-  const ps=document.getElementById('pie-month-sel');if(ps){ps.innerHTML=D.months.map(m=>`<option value="${m.id}">${escH(m.label)}</option>`).join('');ps.value=lm.id;setTimeout(renderPie,60);}
+  // Pie — populate with latest month first, default to latest
+  const ps=document.getElementById('pie-month-sel');
+  if(ps){
+    ps.innerHTML=[...D.months].reverse().map(m=>`<option value="${m.id}">${escH(m.label)}</option>`).join('');
+    ps.value=lm.id;
+    setTimeout(renderPie,60);
+  }
   // Category breakdown
   const cA={},cL={};D.accounts.forEach(a=>{const v=toSGD(lm.values[a.id]||0,a.ccy);a.type==='asset'?cA[a.category]=(cA[a.category]||0)+v:cL[a.category]=(cL[a.category]||0)+v;});
   let aH='';Object.entries(cA).sort((a,b)=>b[1]-a[1]).forEach(([cat,val])=>{const pct=l.assets?Math.round(val/l.assets*100):0;const ex='';aH+=`<div style="margin-bottom:10px"><div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:3px"><span style="font-size:13px">${escH(cat)}${ex}</span><span style="font-size:13px;font-weight:700">${fS(val,true)} <span style="color:var(--sub);font-weight:400">(${pct}%)</span></span></div><div class="bar-t"><div class="bar-f" style="width:${pct}%;background:var(--green)"></div></div></div>`;});
@@ -806,7 +811,17 @@ async function autoUpdateFX(){
 }
 
 function toggleFxPanel(){const p=document.getElementById('e-fx-panel');p.style.display=p.style.display==='none'?'block':'none';}
-function initEntryFX(m){_entryFX=m&&m.fxRates?{...m.fxRates}:{...D.fxRates};renderEntryFX();}
+function initEntryFX(m){
+  if(m&&m.fxRates){
+    // Editing existing month — use that month's saved rates
+    _entryFX={...m.fxRates};
+  } else {
+    // New month — use latest saved month's rates if available, else defaults
+    const lm=latest();
+    _entryFX=lm&&lm.fxRates?{...lm.fxRates}:{...D.fxRates};
+  }
+  renderEntryFX();
+}
 function renderEntryFX(){const d=document.getElementById('e-fx-display'),r=document.getElementById('e-fx-rows');if(!d||!r)return;const p=Object.entries(_entryFX);d.textContent=p.length?p.map(([k,v])=>k+': '+v).join('  ·  '):'Using default rates';r.innerHTML=p.map(([ccy,rate])=>`<div style="display:flex;justify-content:space-between;align-items:center;padding:5px 0;border-bottom:1px solid var(--border)"><span style="font-size:13px;font-weight:600">${escH(ccy)} → SGD</span><div style="display:flex;gap:8px;align-items:center"><input class="inp" value="${rate}" type="number" inputmode="decimal" style="width:90px;font-size:13px;padding:6px 10px" onchange="updateEntryFxRate('${ccy}',this.value)"/><button class="bdg" style="padding:3px 8px;font-size:11px" onclick="removeEntryFx('${ccy}')">✕</button></div></div>`).join('');}
 function updateEntryFxRate(ccy,val){const v=parseFloat(val);if(v>0)_entryFX[ccy]=v;renderEntryFX();updPrev();}
 function removeEntryFx(ccy){delete _entryFX[ccy];renderEntryFX();}
@@ -858,7 +873,7 @@ function buildEntry(vals,restoreAfter=false){
     const insNote = cat==='Insurance' ? `<div style="margin:0 14px 6px;font-size:12px;color:var(--sub);padding:0 2px">💡 Enter the <b>surrender value</b> from your annual policy statement</div>` : '';
     html+=insNote;
     catAccs.forEach(a=>{
-      const badge=a.sub==='cpf'?'<span class="tag tc" style="font-size:9px">CPF</span>':'';
+      const badge='';
       const canDel=a.sub!=='cpf'&&a.sub!=='srs';
       html+=`<div class="card2 drag-item" draggable="true" data-acid="${a.id}" style="margin-bottom:8px">
         <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:7px">
@@ -1317,7 +1332,7 @@ function renderAccList(){
       <div style="display:flex;gap:5px">
         <button class="bsm" style="font-size:11px;padding:4px 10px" data-ci="${ci}">✏</button>
         <button class="btn-inline" data-ai="${ci}">+</button>
-        <button class="bdg" style="font-size:11px;padding:4px 8px" data-delcat="${escH(cat)}">Del</button>
+        <button class="bdg" style="font-size:11px;padding:4px 8px" data-delcat="${escH(cat)}">✕</button>
       </div>
     </div>`;
     catAccs.forEach(a=>{
@@ -1328,13 +1343,13 @@ function renderAccList(){
           <div style="min-width:0;flex:1">
             <span style="font-size:13px;font-weight:600">${escH(a.name)}</span>
             <span class="fxb">${escH(a.ccy)}</span>
-            ${cpf?'<span class="tag tc" style="margin-left:4px;font-size:9px">CPF</span>':''}
+            
             
           </div>
           <div style="display:flex;gap:5px;align-items:center;flex-shrink:0">
             <span class="${a.type==='asset'?'tag ta':'tag tl'}">${a.type==='asset'?'Asset':'Liab'}</span>
             <button class="bsm" style="padding:4px 9px;font-size:12px" data-edit="${a.id}">✏</button>
-            <button class="bdg" style="padding:4px 9px;font-size:12px" data-del="${a.id}">Del</button>
+            <button class="bdg" style="padding:4px 9px;font-size:12px" data-del="${a.id}">✕</button>
           </div>
         </div>
         <div class="acc-edit-row" id="ae-${a.id}">
