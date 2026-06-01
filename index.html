@@ -249,9 +249,12 @@ select.inp{appearance:none;-webkit-appearance:none;background-image:url("data:im
     <div class="lbl" style="margin-bottom:10px;color:var(--blue)">Before Retirement</div>
     <div style="display:grid;grid-template-columns:1fr 1fr;gap:9px;margin-bottom:9px">
       <div><div class="lbl tip-wrap">Monthly Take-Home Income<span class="tip-icon" tabindex="0" onclick="this.classList.toggle('open')">?</span><div class="tip-box"><b>Monthly take-home pay after CPF deductions.</b><br/><br/>You may include:<br/>• Fixed monthly salary (after CPF)<br/>• Projected annual bonus ÷ 12<br/>• Commission (use a conservative average)<br/><br/><b>Example:</b> Salary S$6,000 + avg bonus S$12,000/yr = S$6,000 + S$1,000 = <b>S$7,000/mo</b></div></div><input class="inp" id="r-inc-pre" type="number" inputmode="decimal" placeholder="8000" oninput="calcRetire()"/></div>
-      <div><div class="lbl tip-wrap">Monthly Savings<span class="tip-icon" tabindex="0" onclick="this.classList.toggle('open')">?</span><div class="tip-box"><b>Amount you invest or save each month.</b><br/><br/>If you fill in Income and Expenses above, this field auto-calculates as Income − Expenses.<br/><br/>You can override it manually — it will turn white when you edit it directly.</div></div><input class="inp" id="r-sav" type="number" inputmode="decimal" placeholder="2500" oninput="this._manualEdit=true;this.style.background='';calcRetire()"/></div>
+      <div><div class="lbl tip-wrap">Monthly Surplus Invested<span class="tip-icon" tabindex="0" onclick="this.classList.toggle('open')">?</span><div class="tip-box"><b>All surplus income that goes toward building your nest egg.</b><br/><br/>This includes everything not spent — cash savings, investments, CPF voluntary top-ups, SSBs, etc.<br/><br/><b>Auto-calculated</b> as Income − Expenses when both are filled.<br/>Override by typing your own value.</div></div><input class="inp" id="r-sav" type="number" inputmode="decimal" placeholder="" oninput="this._manualEdit=true;this.style.background='var(--s1)';calcRetire()"/></div>
     </div>
-    <div><div class="lbl">Monthly Expenses</div><input class="inp" id="r-exp-pre" type="number" inputmode="decimal" placeholder="4000" oninput="calcRetire()"/></div>
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:9px">
+      <div><div class="lbl">Monthly Expenses</div><input class="inp" id="r-exp-pre" type="number" inputmode="decimal" placeholder="4000" oninput="calcRetire()"/></div>
+      <div><div class="lbl tip-wrap">Savings Return Rate %/yr<span class="tip-icon" tabindex="0" onclick="this.classList.toggle('open')">?</span><div class="tip-box"><b>Conservative return on your monthly surplus.</b><br/><br/>Your existing portfolio compounds at the Portfolio Return rate above.<br/><br/>Your <b>new monthly savings</b> may earn less — they often sit in cash, CPF OA (2.5%) or SSBs (3%) before being deployed.<br/><br/>Recommended: <b>2–3%</b> for conservative planning.<br/>Default is <b>2.5%</b>.</div></div><input class="inp" id="r-sav-rtn" type="number" inputmode="decimal" placeholder="2.5" oninput="calcRetire()"/></div>
+    </div>
   </div>
   <div class="card" style="border-left:3px solid var(--green)">
     <div class="lbl" style="margin-bottom:10px;color:var(--green)">After Retirement</div>
@@ -259,13 +262,14 @@ select.inp{appearance:none;-webkit-appearance:none;background-image:url("data:im
       <div><div class="lbl">Monthly Expenses (all-in)</div><input class="inp" id="r-exp" type="number" inputmode="decimal" placeholder="5000" oninput="calcRetire()"/></div>
       <div><div class="lbl tip-wrap">Monthly Savings / Reinvest<span class="tip-icon" tabindex="0" onclick="this.classList.toggle('open')">?</span><div class="tip-box"><b>Money you still set aside after retiring.</b><br/><br/>Examples:<br/>• Part-time work surplus<br/>• Rental income reinvested<br/>• Dividends not spent<br/><br/>This reduces your monthly drawdown from your portfolio, so you need a smaller nest egg.<br/><br/><b>Leave at 0</b> if you expect no surplus after expenses.</div></div><input class="inp" id="r-sav-post" type="number" inputmode="decimal" placeholder="0" oninput="calcRetire()"/></div>
     </div>
-    <div style="display:grid;grid-template-columns:1fr 1fr;gap:9px">
-      <div><div class="lbl tip-wrap">Other Monthly Income<span class="tip-icon" tabindex="0" onclick="this.classList.toggle('open')">?</span><div class="tip-box"><b>Income you receive in retirement beyond CPF Life.</b><br/><br/>Examples:<br/>• Rental income<br/>• Part-time / freelance<br/>• Dividends paid out<br/>• Spouse's income<br/><br/>This offsets your expenses so you draw less from your portfolio.</div></div><input class="inp" id="r-inc-post" type="number" inputmode="decimal" placeholder="1000" oninput="calcRetire()"/></div>
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:9px;margin-bottom:9px">
+      <div><div class="lbl tip-wrap">Other Monthly Income<span class="tip-icon" tabindex="0" onclick="this.classList.toggle('open')">?</span><div class="tip-box"><b>Income you receive in retirement beyond CPF Life.</b><br/><br/>Examples:<br/>• Rental income<br/>• Part-time / freelance<br/>• Dividends paid out<br/>• Spouse's income<br/><br/>This offsets your expenses so you draw less from your portfolio.</div></div><input class="inp" id="r-inc-post" type="number" inputmode="decimal" placeholder="0" oninput="calcRetire()"/></div>
       <div>
         <div class="lbl tip-wrap">CPF Life at 65/mo<span class="tip-icon" tabindex="0" onclick="this.classList.toggle('open')">?</span><div class="tip-box"><b>CPF LIFE</b> pays monthly income from age 65 for life.<br/><br/>Log in to <b>my.cpf.gov.sg</b> → My Retirement → CPF LIFE Estimator<br/><br/>Typical: <b>S$700–S$2,000/mo</b></div></div>
         <input class="inp" id="r-cpf" type="number" inputmode="decimal" placeholder="1200" oninput="calcRetire()" style="margin-top:5px"/>
       </div>
     </div>
+    <div><div class="lbl tip-wrap">Post-Retirement Savings Return Rate %/yr<span class="tip-icon" tabindex="0" onclick="this.classList.toggle('open')">?</span><div class="tip-box"><b>Return on your reinvested savings after retirement.</b><br/><br/>After retiring, any surplus you reinvest (rental income, part-time work etc.) may earn a conservative rate rather than full portfolio return — since you'd be deploying it more cautiously.<br/><br/>Recommended: <b>2–3%</b> conservative.<br/>Set equal to Portfolio Return if fully reinvested in equities.</div></div><input class="inp" id="r-sav-post-rtn" type="number" inputmode="decimal" placeholder="2.5" oninput="calcRetire()"/></div>
   </div>
   <div id="r-result"></div>
   <div class="card">
@@ -472,7 +476,7 @@ const DA=[
   {id:'cc3',name:'Credit Card 3',type:'liability',category:'Credit Cards',sub:'credit',ccy:'SGD'},
   {id:'cc4',name:'Credit Card 4',type:'liability',category:'Credit Cards',sub:'credit',ccy:'SGD'},
 ];
-const DR={age:35,retireAge:55,lifeExp:85,returnPct:5,expenses:4000,inflation:2.5,savings:2500,cpfPayout:1200,expensesPre:0,incomePre:0,incomePost:0,savingsPost:0};
+const DR={age:35,retireAge:55,lifeExp:85,returnPct:5,savingsReturnPct:2.5,savingsPostReturnPct:2.5,expenses:4000,inflation:2.5,savings:2500,cpfPayout:1200,expensesPre:0,incomePre:0,incomePost:0,savingsPost:0};
 const DG=[{id:'goal-retire',name:'Retirement Nest Egg',target:2000000,ccy:'SGD'},{id:'goal-emergency',name:'Emergency Fund',target:24000,ccy:'SGD'}];
 const DFX={USD:1.28,EUR:1.46,GBP:1.71,AUD:0.88,JPY:0.009,HKD:0.16,MYR:0.30,CNY:0.187};
 
@@ -1005,12 +1009,29 @@ function attachDragReorder(container){
 }
 
 // ── RETIREMENT ──
-function loadRetire(){const r=D.retire,map={'r-age':r.age,'r-ret':r.retireAge,'r-life':r.lifeExp,'r-rtn':r.returnPct,'r-inf':r.inflation,'r-sav':r.savings,'r-cpf':r.cpfPayout,'r-exp':r.expenses,'r-exp-pre':r.expensesPre||0,'r-inc-pre':r.incomePre||0,'r-inc-post':r.incomePost||0,'r-sav-post':r.savingsPost||0};Object.entries(map).forEach(([id,val])=>{const el=document.getElementById(id);if(el&&val)el.value=val;});calcRetire();}
+function loadRetire(){
+  const r=D.retire;
+  const map={'r-age':r.age,'r-ret':r.retireAge,'r-life':r.lifeExp,'r-rtn':r.returnPct,
+    'r-sav-rtn':r.savingsReturnPct||2.5,
+    'r-sav-post-rtn':r.savingsPostReturnPct||2.5,
+    'r-inf':r.inflation,'r-cpf':r.cpfPayout,'r-exp':r.expenses,
+    'r-exp-pre':r.expensesPre||0,'r-inc-pre':r.incomePre||0,
+    'r-inc-post':r.incomePost||0,'r-sav-post':r.savingsPost||0};
+  Object.entries(map).forEach(([id,val])=>{const el=document.getElementById(id);if(el&&val)el.value=val;});
+  const savInput=document.getElementById('r-sav');
+  if(savInput){
+    savInput._manualEdit=false;
+    if(r.savings) savInput.value=r.savings;
+  }
+  calcRetire();
+}
 function calcRetire(){
   const age=parseFloat(document.getElementById('r-age').value)||35;
   const rAge=parseFloat(document.getElementById('r-ret').value)||55;
   const life=parseFloat(document.getElementById('r-life').value)||85;
   const ret=(parseFloat(document.getElementById('r-rtn').value)||5)/100;
+  const savRtn=(parseFloat(document.getElementById('r-sav-rtn').value)||2.5)/100;
+  const savPostRtn=(parseFloat(document.getElementById('r-sav-post-rtn').value)||2.5)/100;
   const inf=(parseFloat(document.getElementById('r-inf').value)||2.5)/100;
   const cpf=parseFloat(document.getElementById('r-cpf').value)||0;
   const expPost=parseFloat(document.getElementById('r-exp').value)||4000;
@@ -1019,48 +1040,65 @@ function calcRetire(){
   const incPost=parseFloat(document.getElementById('r-inc-post').value)||0;
   const savPost=parseFloat(document.getElementById('r-sav-post').value)||0;
 
-  // B) Auto-compute monthly savings if income and expenses are filled
+  // Auto-compute monthly surplus — requires income > 0, expenses can be zero
+  const savInput=document.getElementById('r-sav');
   let sav=parseFloat(document.getElementById('r-sav').value)||0;
-  if(incPre>0&&expPre>0){
-    const autoSav=Math.max(incPre-expPre,0);
-    const savInput=document.getElementById('r-sav');
-    // Only auto-fill if user hasn't manually entered a value
-    if(!savInput._manualEdit){
-      sav=autoSav;
-      savInput.value=autoSav>0?autoSav:'';
+  if(savInput && !savInput._manualEdit){
+    if(incPre>0){
+      sav=Math.max(incPre-(expPre||0),0);
+      savInput.value=sav||'';
       savInput.style.background='var(--green-dim)';
-      savInput.title='Auto-calculated from income − expenses';
+    } else {
+      // Income cleared — clear auto-computed savings too
+      sav=0;
+      savInput.value='';
+      savInput.style.background='';
     }
   }
 
-  D.retire={age,retireAge:rAge,lifeExp:life,returnPct:ret*100,inflation:inf*100,
-    savings:sav,cpfPayout:cpf,expenses:expPost,expensesPre:expPre,
+  D.retire={age,retireAge:rAge,lifeExp:life,returnPct:ret*100,savingsReturnPct:savRtn*100,
+    savingsPostReturnPct:savPostRtn*100,
+    inflation:inf*100,savings:sav,cpfPayout:cpf,expenses:expPost,expensesPre:expPre,
     incomePre:incPre,incomePost:incPost,savingsPost:savPost};
   saveState();
 
   const curNW=latest()?calcNW(latest().values).net:0;
   const ytr=Math.max(rAge-age,0);
   const yir=Math.max(life-rAge,0);
-  const mr=ret/12;
-  const ems=incPre>0?(incPre-expPre-sav>=0?sav:Math.max(incPre-expPre,0)):sav;
+  const mr=ret/12;           // portfolio return monthly
+  const msr=savRtn/12;       // pre-retirement savings return monthly
+  const msrPost=savPostRtn/12; // post-retirement savings reinvest return monthly
 
-  // Project NW to target retirement age
-  let futNW=curNW;
-  for(let i=0;i<ytr*12;i++) futNW=futNW*(1+mr)+ems;
+  // Issue 1 fix: ems is simply sav (auto-compute already ensures sav = income - expenses)
+  const ems=sav;
+
+  // Project existing NW at portfolio rate, monthly contributions at conservative savings rate
+  const months=ytr*12;
+  const portfolioGrowth=curNW*Math.pow(1+mr,months);
+  const savingsGrowth=msr>0 ? ems*(Math.pow(1+msr,months)-1)/msr : ems*months;
+  let futNW=portfolioGrowth+savingsGrowth;
 
   const infExp=expPost*Math.pow(1+inf,ytr);
   const cpfM=rAge>=65?cpf:0;
-  const nd=Math.max(infExp-incPost-cpfM-savPost,0);
-  const rr=(1+ret)/(1+inf)-1,mrr=rr/12;
 
+  // Issue 2 fix: savPost reinvested at savPostRtn reduces the effective drawdown
+  // Effective monthly drawdown from portfolio = expenses - income - CPF - savPost(reinvested)
+  const nd=Math.max(infExp-incPost-cpfM-savPost,0);
+
+  // Real return (above inflation) for required nest egg PV calculation
+  const rr=(1+ret)/(1+inf)-1;
+  const mrr=rr/12;
+
+  // Issue 3 fix: discount pv2 using real return rr consistently
   let req;
   if(rAge<65&&yir>0){
     const y1=Math.min(65-rAge,yir),y2=Math.max(yir-y1,0);
-    const d1=Math.max(infExp-incPost-savPost,0);
-    const d2=Math.max(infExp-incPost-cpf-savPost,0);
+    const d1=Math.max(infExp-incPost-savPost,0);         // pre-65 drawdown (no CPF Life)
+    const d2=Math.max(infExp-incPost-cpf-savPost,0);     // post-65 drawdown (with CPF Life)
     const pv1=mrr<=0?d1*y1*12:d1*(1-Math.pow(1+mrr,-y1*12))/mrr;
     const pv2=mrr<=0?d2*y2*12:d2*(1-Math.pow(1+mrr,-y2*12))/mrr;
-    req=pv1+pv2/Math.pow(1+ret,y1);
+    // Discount pv2 back to retirement date using real return (issue 3 fix)
+    req=pv1+(y2>0?pv2/Math.pow(1+rr,y1):0);
   } else {
     req=mrr<=0?nd*yir*12:nd*(1-Math.pow(1+mrr,-yir*12))/mrr;
   }
@@ -1069,17 +1107,15 @@ function calcRetire(){
   const pct=Math.min(req>0?futNW/req*100:100,150);
   const ok=surplus>=0,close=pct>=80;
 
-  // C) Fixed earliest age scan — start from current age (not age+1)
-  // Uses same monthly savings (ems) and same required nest egg formula
+  // Earliest age scan — consistent with main calculation
   let earliest=null;
   for(let ta=age;ta<=life;ta++){
-    // Project NW to test age ta
-    let p2=curNW;
-    for(let i=0;i<(ta-age)*12;i++) p2=p2*(1+mr)+ems;
-    // Required nest egg at age ta
+    const mon2=(ta-age)*12;
+    const pg2=curNW*Math.pow(1+mr,mon2);
+    const sg2=msr>0?ems*(Math.pow(1+msr,mon2)-1)/msr:ems*mon2;
+    const p2=pg2+sg2;
     const ie=expPost*Math.pow(1+inf,ta-age);
     const cpfA=ta>=65?cpf:0;
-    const draw=Math.max(ie-incPost-cpfA-savPost,0);
     const ry=Math.max(life-ta,0);
     let r2;
     if(ta<65&&ry>0){
@@ -1088,8 +1124,9 @@ function calcRetire(){
       const d2b=Math.max(ie-incPost-cpf-savPost,0);
       const pv1b=mrr<=0?d1b*y1b*12:d1b*(1-Math.pow(1+mrr,-y1b*12))/mrr;
       const pv2b=mrr<=0?d2b*y2b*12:d2b*(1-Math.pow(1+mrr,-y2b*12))/mrr;
-      r2=pv1b+pv2b/Math.pow(1+ret,y1b);
+      r2=pv1b+(y2b>0?pv2b/Math.pow(1+rr,y1b):0);
     } else {
+      const draw=Math.max(ie-incPost-cpfA-savPost,0);
       r2=mrr<=0?draw*ry*12:draw*(1-Math.pow(1+mrr,-ry*12))/mrr;
     }
     if(p2>=r2){earliest=ta;break;}
@@ -1110,18 +1147,18 @@ function calcRetire(){
   ${incPre>0?`
     <div class="row"><span style="font-size:13px;color:var(--sub)">Monthly income</span><span style="font-weight:700">${fS(incPre,true)}</span></div>
     <div class="row"><span style="font-size:13px;color:var(--sub)">Monthly expenses</span><span style="font-weight:700">${fS(expPre,true)}</span></div>
-    <div class="row"><span style="font-size:13px;color:var(--sub)">Monthly savings</span><span style="font-weight:700;color:var(--blue)">${fS(ems,true)}</span></div>
-    ${preNcf!==null?`<div class="row"><span style="font-size:13px;color:var(--sub)">Net cashflow</span><span class="${preNcf>=0?'pos':'neg'}" style="font-weight:700">${fS(preNcf,true)}</span></div>`:''}
-  `:`<div class="row"><span style="font-size:13px;color:var(--sub)">Monthly savings</span><span style="font-weight:700;color:var(--blue)">${fS(ems,true)}</span></div>`}
-  <div class="row"><span style="font-size:13px;color:var(--sub)">Current NW</span><span style="font-weight:700">${fS(curNW,true)}</span></div>
-  <div class="row" style="border-bottom:none"><span style="font-size:13px;color:var(--sub)">Projected at age ${rAge}</span><span style="font-weight:700;color:var(--blue)">${fS(futNW,true)}</span></div>
+    <div class="row"><span style="font-size:13px;color:var(--sub)">Monthly surplus invested (${(savRtn*100).toFixed(1)}%/yr)</span><span style="font-weight:700;color:var(--blue)">${fS(ems,true)}/mo</span></div>
+    ${preNcf!==null?`<div class="row"><span style="font-size:13px;color:var(--sub)">Net cashflow check</span><span class="${preNcf>=0?'pos':'neg'}" style="font-weight:700">${fS(preNcf,true)}</span></div>`:''}
+  `:`<div class="row"><span style="font-size:13px;color:var(--sub)">Monthly surplus invested (${(savRtn*100).toFixed(1)}%/yr)</span><span style="font-weight:700;color:var(--blue)">${fS(ems,true)}/mo</span></div>`}
+  <div class="row"><span style="font-size:13px;color:var(--sub)">Current portfolio (${(ret*100).toFixed(1)}%/yr)</span><span style="font-weight:700">${fS(curNW,true)}</span></div>
+  <div class="row" style="border-bottom:none"><span style="font-size:13px;color:var(--sub)">Projected NW at age ${rAge}</span><span style="font-weight:700;color:var(--blue)">${fS(futNW,true)}</span></div>
   <div class="divr"></div>
   <div style="font-size:10px;font-weight:800;text-transform:uppercase;letter-spacing:.08em;color:var(--green);margin-bottom:6px">After Retirement</div>
   <div class="row"><span style="font-size:13px;color:var(--sub)">Monthly expenses at ${rAge} (inflation adj.)</span><span style="font-weight:700">${fS(infExp,true)}/mo</span></div>
-  ${savPost>0?`<div class="row"><span style="font-size:13px;color:var(--sub)">Ongoing savings</span><span style="font-weight:700;color:var(--blue)">${fS(savPost,true)}/mo</span></div>`:''}
+  ${savPost>0?`<div class="row"><span style="font-size:13px;color:var(--sub)">Reinvested savings (${(savPostRtn*100).toFixed(1)}%/yr)</span><span style="font-weight:700;color:var(--blue)">−${fS(savPost,true)}/mo</span></div>`:''}
   ${incPost>0?`<div class="row"><span style="font-size:13px;color:var(--sub)">Other income</span><span style="font-weight:700;color:var(--green)">−${fS(incPost,true)}/mo</span></div>`:''}
   ${cpf>0?`<div class="row"><span style="font-size:13px;color:var(--sub)">CPF Life (from 65)</span><span style="font-weight:700;color:var(--green)">−${fS(cpf,true)}/mo</span></div>`:''}
-  <div class="row"><span style="font-size:13px;color:var(--sub)">Net monthly drawdown</span><span style="font-weight:700;color:var(--red)">${fS(nd,true)}/mo</span></div>
+  <div class="row"><span style="font-size:13px;color:var(--sub)">Net monthly drawdown from portfolio</span><span style="font-weight:700;color:var(--red)">${fS(nd,true)}/mo</span></div>
   <div class="divr"></div>
   <div class="row"><span style="font-size:13px;color:var(--sub)">Required nest egg</span><span style="font-weight:700;color:var(--gold)">${fS(req,true)}</span></div>
   <div class="row"><span style="font-size:13px;color:var(--sub)">Projected at retirement</span><span style="font-weight:700;color:var(--blue)">${fS(futNW,true)}</span></div>
