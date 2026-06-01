@@ -577,7 +577,19 @@ function latest(){const s=sortedMonths();return s[s.length-1];}
 function prev(){const s=sortedMonths();return s.length>=2?s[s.length-2]:null;}
 function getAllCats(){return[...new Set(D.accounts.map(a=>a.category))];}
 function escH(s){return String(s).replace(/&/g,'&amp;').replace(/"/g,'&quot;').replace(/</g,'&lt;').replace(/>/g,'&gt;');}
-function yLabel(n){const a=Math.abs(n);if(a>=1e6)return'S$'+(n/1e6).toFixed(1)+'M';if(a>=1000)return'S$'+(n/1000).toFixed(0)+'k';return'S$'+Math.round(n);}
+function yLabel(n,tickRange){
+  const a=Math.abs(n);
+  // Adaptive decimals: use more dp when range is small relative to value
+  if(a>=1e6){
+    const dp=tickRange&&tickRange<50000?2:tickRange&&tickRange<200000?1:0;
+    return'S$'+(n/1e6).toFixed(dp)+'M';
+  }
+  if(a>=1000){
+    const dp=tickRange&&tickRange<5000?1:0;
+    return'S$'+(n/1000).toFixed(dp)+'k';
+  }
+  return'S$'+Math.round(n);
+}
 
 let _tt;
 function showToast(msg,dur=2500){const t=document.getElementById('toast');t.textContent=msg;t.classList.add('show');clearTimeout(_tt);_tt=setTimeout(()=>t.classList.remove('show'),dur);}
@@ -645,17 +657,26 @@ function drawSpark(id,data,labels){
   // Scroll to rightmost (latest) on load
   const wrap=document.getElementById('spark-wrap');
   if(wrap){wrap.style.width=minW+'px';setTimeout(()=>{const sc=wrap.parentElement;if(sc)sc.scrollLeft=sc.scrollWidth;},60);}
+  // Add right padding so last label isn't clipped
+  const RP=32*dpr;
   const W=minW*dpr,H=c.offsetHeight*dpr||90;
   c.width=W;c.height=H;const ctx=c.getContext('2d');ctx.clearRect(0,0,W,H);
-  const XP=52*dpr,BOT=18*dpr,TOP=8*dpr,cW=W-XP,cH=H-TOP-BOT;
+  const XP=52*dpr,BOT=18*dpr,TOP=8*dpr,cW=W-XP-RP,cH=H-TOP-BOT;
   const mn=Math.min(...data),mx=Math.max(...data),rng=mx-mn||1;
   const yMin=mn-rng*.1,yMax=mx+rng*.1,yRng=yMax-yMin;
   const toY=v=>TOP+cH-(((v-yMin)/yRng)*cH),toX=i=>XP+(i/(data.length-1))*cW;
   function redraw(hi){
     ctx.clearRect(0,0,W,H);ctx.font=`${10*dpr}px DM Sans,sans-serif`;ctx.textAlign='right';
-    for(let s=0;s<=4;s++){const v=yMin+(yRng*(s/4)),y=toY(v);ctx.globalAlpha=.2;ctx.beginPath();ctx.moveTo(XP,y);ctx.lineTo(W,y);ctx.strokeStyle='#fff';ctx.lineWidth=dpr;ctx.stroke();ctx.globalAlpha=1;ctx.fillStyle='rgba(255,255,255,.5)';ctx.fillText(yLabel(v),XP-4,y+3*dpr);}
+    for(let s=0;s<=4;s++){const v=yMin+(yRng*(s/4)),y=toY(v);ctx.globalAlpha=.2;ctx.beginPath();ctx.moveTo(XP,y);ctx.lineTo(W,y);ctx.strokeStyle='#fff';ctx.lineWidth=dpr;ctx.stroke();ctx.globalAlpha=1;ctx.fillStyle='rgba(255,255,255,.5)';ctx.fillText(yLabel(v,yRng/4),XP-4,y+3*dpr);}
     ctx.textAlign='center';const step=Math.ceil(data.length/6);
-    data.forEach((_,i)=>{if(i%step===0||i===data.length-1){ctx.fillStyle='rgba(255,255,255,.5)';ctx.fillText(labels?labels[i].split(' ')[0]:'',toX(i),H-3*dpr);}});
+    data.forEach((_,i)=>{
+      const isLast=i===data.length-1;
+      if(i%step===0||isLast){
+        ctx.textAlign=isLast?'right':'center';
+        ctx.fillStyle='rgba(255,255,255,.5)';
+        ctx.fillText(labels?labels[i].split(' ')[0]:'',toX(i)+(isLast?RP/dpr:0),H-3*dpr);
+      }
+    });
     ctx.globalAlpha=.35;ctx.beginPath();ctx.moveTo(XP,TOP);ctx.lineTo(XP,H-BOT);ctx.moveTo(XP,H-BOT);ctx.lineTo(W,H-BOT);ctx.strokeStyle='#fff';ctx.lineWidth=dpr;ctx.stroke();ctx.globalAlpha=1;
     const pts=data.map((v,i)=>({x:toX(i),y:toY(v)}));
     const g=ctx.createLinearGradient(0,TOP,0,H-BOT);g.addColorStop(0,'rgba(255,255,255,.25)');g.addColorStop(1,'rgba(255,255,255,.02)');
@@ -688,7 +709,7 @@ function drawBar(){
   const maxA=Math.max(...pts.map(d=>d.assets),1)*1.05,toH=v=>(v/maxA)*cH*.88;
   const n=pts.length,gW=cW/n,bW=Math.max(gW*.28,4*dpr);
   ctx.font=`${9*dpr}px DM Sans,sans-serif`;
-  for(let s=0;s<=4;s++){const v=maxA*(s/4),y=TOP+cH-toH(v);ctx.globalAlpha=.15;ctx.beginPath();ctx.moveTo(XP,y);ctx.lineTo(W,y);ctx.strokeStyle='#94a3b8';ctx.lineWidth=dpr;ctx.stroke();ctx.globalAlpha=1;ctx.textAlign='right';ctx.fillStyle='#6b7280';ctx.fillText(yLabel(v),XP-4,y+3*dpr);}
+  for(let s=0;s<=4;s++){const v=maxA*(s/4),y=TOP+cH-toH(v);ctx.globalAlpha=.15;ctx.beginPath();ctx.moveTo(XP,y);ctx.lineTo(W,y);ctx.strokeStyle='#94a3b8';ctx.lineWidth=dpr;ctx.stroke();ctx.globalAlpha=1;ctx.textAlign='right';ctx.fillStyle='#6b7280';ctx.fillText(yLabel(v,maxA/4),XP-4,y+3*dpr);}
   ctx.globalAlpha=.3;ctx.beginPath();ctx.moveTo(XP,TOP);ctx.lineTo(XP,TOP+cH);ctx.moveTo(XP,TOP+cH);ctx.lineTo(W,TOP+cH);ctx.strokeStyle='#94a3b8';ctx.lineWidth=dpr;ctx.stroke();ctx.globalAlpha=1;
   const nwP=[];
   pts.forEach((d,i)=>{
@@ -698,7 +719,10 @@ function drawBar(){
     ctx.fillStyle='#dc262633';ctx.beginPath();if(ctx.roundRect)ctx.roundRect(cx+1,bY-lH,bW,lH,[2,2,0,0]);else ctx.rect(cx+1,bY-lH,bW,lH);ctx.fill();
     ctx.strokeStyle='#dc2626';ctx.beginPath();if(ctx.roundRect)ctx.roundRect(cx+1,bY-lH,bW,lH,[2,2,0,0]);else ctx.rect(cx+1,bY-lH,bW,lH);ctx.stroke();
     const ny=bY-toH(Math.max(d.net,0))-2;nwP.push({x:cx,y:ny,d});
-    ctx.textAlign='center';ctx.fillStyle='#6b7280';ctx.fillText(d.label.split(' ')[0],cx,H-3*dpr);
+    ctx.textAlign='center';ctx.fillStyle='#6b7280';
+    const isLastBar=i===n-1;
+    if(isLastBar){ctx.textAlign='right';ctx.fillText(d.label.split(' ')[0],cx+bW/2+2*dpr,H-3*dpr);}
+    else{ctx.fillText(d.label.split(' ')[0],cx,H-3*dpr);}
   });
   if(nwP.length>1){ctx.beginPath();nwP.forEach((p,i)=>i===0?ctx.moveTo(p.x,p.y):ctx.lineTo(p.x,p.y));ctx.strokeStyle='#2563eb';ctx.lineWidth=2*dpr;ctx.lineJoin='round';ctx.stroke();}
   nwP.forEach(p=>{ctx.beginPath();ctx.arc(p.x,p.y,3.5*dpr,0,Math.PI*2);ctx.fillStyle='#2563eb';ctx.fill();ctx.beginPath();ctx.arc(p.x,p.y,2*dpr,0,Math.PI*2);ctx.fillStyle='#fff';ctx.fill();});
@@ -1141,11 +1165,12 @@ function calcDecum(){
   const inf    = (parseFloat(document.getElementById('r-inf').value)||2.5)/100;
   const cpf    = parseFloat(document.getElementById('r-cpf').value)||0;
   const exp    = parseFloat(document.getElementById('r-exp').value)||4000;
+  const exp65  = _reduceExp65 ? exp*0.85 : exp;  // reduced expenses after 65
   const inc    = parseFloat(document.getElementById('r-inc-post').value)||0;
   const savRtn = (parseFloat(document.getElementById('r-sav-rtn').value)||2.5)/100;
   const sav    = parseFloat(document.getElementById('r-sav').value)||0;
 
-  // Compute projected NW at retirement (same as accumulation)
+  // Compute projected NW at retirement (same formula as accumulation)
   const curNWFull = latest()?calcNW(latest().values).net:0;
   let curNW = curNWFull;
   if(!_propInPortfolio&&latest()){
@@ -1156,17 +1181,18 @@ function calcDecum(){
   }
 
   const ytr=Math.max(rAge-age,0);
-  const mr=ret/12; const msr=savRtn/12;
+  const mr=ret/12;
+  const msr=savRtn/12;
   const months=ytr*12;
   const pg=curNW*Math.pow(1+mr,months);
   const sg=msr>0?sav*((1+msr)**months-1)/msr:sav*months;
   const portfolioAtRetire=pg+sg;
 
-  // Show summary of what's being used
+  // Show summary
   const sumEl=document.getElementById('dc-summary');
   if(sumEl) sumEl.innerHTML=
-    `<b>Starting at age ${rAge} with projected S${fS(portfolioAtRetire,true)}</b><br/>` +
-    `Expenses: ${fS(exp,true)}/mo · Return: ${(ret*100).toFixed(1)}%/yr · Inflation: ${(inf*100).toFixed(1)}%/yr` +
+    `<b>Starting at age ${rAge} with projected ${fS(portfolioAtRetire,true)}</b><br/>` +
+    `Expenses: ${fS(exp,true)}/mo${_reduceExp65?` → ${fS(exp65,true)}/mo after 65`:''} · Return: ${(ret*100).toFixed(1)}%/yr · Inflation: ${(inf*100).toFixed(1)}%/yr` +
     (cpf>0?` · CPF Life: ${fS(cpf,true)}/mo from 65`:'') +
     (inc>0?` · Other income: ${fS(inc,true)}/mo`:'');
 
@@ -1175,19 +1201,20 @@ function calcDecum(){
     return;
   }
 
-  const mr2=ret/12;
-  const yir=Math.max(life-rAge,0);
-
-  // Simulate month by month from retirement age until portfolio runs out
+  // Simulate month by month from retirement age
+  // Two-phase expenses: retire→65 uses exp, 65+ uses exp65
   let portfolio=portfolioAtRetire;
   let simMonths=0;
   const maxMonths=(100-rAge)*12;
   while(portfolio>0&&simMonths<maxMonths){
     const yr=simMonths/12;
-    const infExp=exp*Math.pow(1+inf,yr);
-    const cpfM=(rAge+yr)>=65?cpf:0;
+    const currentAge=rAge+yr;
+    // Apply reduced expenses after 65
+    const baseExp=currentAge>=65?exp65:exp;
+    const infExp=baseExp*Math.pow(1+inf,yr);
+    const cpfM=currentAge>=65?cpf:0;
     const draw=Math.max(infExp-inc-cpfM,0);
-    portfolio=portfolio*(1+mr2)-draw;
+    portfolio=portfolio*(1+mr)-draw;
     simMonths++;
   }
 
@@ -1195,13 +1222,10 @@ function calcDecum(){
   const runsOut=simMonths<maxMonths;
   const ageRunsOut=Math.round(rAge+yearsLast);
 
-  // Safe withdrawal rate
-  const annualDraw=Math.max(exp-inc,0)*12;
-  const swr=portfolioAtRetire>0?annualDraw/portfolioAtRetire*100:0;
+  // Safe withdrawal rate (based on first year net drawdown)
+  const netDrawNow=Math.max(exp-inc-(rAge>=65?cpf:0),0);
+  const swr=portfolioAtRetire>0?netDrawNow*12/portfolioAtRetire*100:0;
   const swrOk=swr<=4;
-
-  const cpfNow=rAge>=65?cpf:0;
-  const netDraw=Math.max(exp-inc-cpfNow,0);
 
   const ok=!runsOut||ageRunsOut>=90;
   const vc=ok?'v-ok':ageRunsOut>=80?'v-warn':'v-no';
@@ -1213,8 +1237,9 @@ function calcDecum(){
     <div style="font-size:13px;color:${ok?'var(--green)':ageRunsOut>=80?'var(--gold)':'var(--red)'}">${runsOut?(ageRunsOut>=90?'Well covered — good buffer past 90.':ageRunsOut>=80?'Manageable — consider reducing expenses or increasing returns.':'Portfolio may run short — review your plan.'):'Your portfolio should last your lifetime.'}</div>
   </div>
   <div class="row"><span style="font-size:13px;color:var(--sub)">Projected portfolio at ${rAge}</span><span style="font-weight:700">${fS(portfolioAtRetire,true)}</span></div>
-  <div class="row"><span style="font-size:13px;color:var(--sub)">Monthly expenses at ${rAge} (inflation adj.)</span><span style="font-weight:700">${fS(exp,true)}</span></div>
-  <div class="row"><span style="font-size:13px;color:var(--sub)">Net monthly drawdown</span><span style="font-weight:700;color:var(--red)">${fS(netDraw,true)}/mo</span></div>
+  <div class="row"><span style="font-size:13px;color:var(--sub)">Monthly expenses at ${rAge}</span><span style="font-weight:700">${fS(exp,true)}/mo</span></div>
+  ${_reduceExp65?`<div class="row"><span style="font-size:13px;color:var(--sub)">Monthly expenses after 65 (−15%)</span><span style="font-weight:700;color:var(--green)">${fS(exp65,true)}/mo</span></div>`:''}
+  <div class="row"><span style="font-size:13px;color:var(--sub)">Net monthly drawdown at ${rAge}</span><span style="font-weight:700;color:var(--red)">${fS(netDrawNow,true)}/mo</span></div>
   <div class="row"><span style="font-size:13px;color:var(--sub)">Withdrawal rate</span><span style="font-weight:700;color:${swrOk?'var(--green)':'var(--red)'}">${swr.toFixed(1)}% ${swrOk?'✓ Safe (≤4%)':'⚠ High (>4%)'}</span></div>
   <div class="divr"></div>
   ${runsOut
