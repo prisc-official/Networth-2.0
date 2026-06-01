@@ -349,6 +349,7 @@ select.inp{appearance:none;-webkit-appearance:none;background-image:url("data:im
         <div style="font-size:56px;margin-bottom:16px">🔒</div>
         <div style="font-family:'DM Sans',sans-serif;font-size:28px;font-weight:800;color:#fff;letter-spacing:-.3px;">NetWorth <span style="color:#93c5fd">SG</span></div>
         <div style="color:rgba(255,255,255,.55);font-size:13px;margin-top:8px">Enter your access password to continue</div>
+        <div style="color:rgba(255,255,255,.35);font-size:12px;margin-top:8px">Brought to you by <span style="color:rgba(255,255,255,.55);font-weight:600">ThatFinancialGal</span></div>
       </div>
       <div style="margin-bottom:14px;position:relative">
         <input id="lock-input" type="password"
@@ -374,40 +375,40 @@ select.inp{appearance:none;-webkit-appearance:none;background-image:url("data:im
 </div>
 
 <!-- WELCOME SCREEN (first open only) -->
-<div id="v-welcome" style="display:none;position:fixed;inset:0;background:linear-gradient(160deg,#1e3a8a,#1d4ed8,#2563eb);z-index:50000;overflow-y:auto;padding:calc(var(--safe-t)+40px) 28px calc(40px + var(--safe-b));">
+<div id="v-welcome" style="display:none;position:fixed;inset:0;background:linear-gradient(160deg,#1e3a8a,#1d4ed8,#2563eb);z-index:50000;overflow-y:auto;padding:calc(var(--safe-t)+24px) 28px calc(24px + var(--safe-b));">
   <div style="max-width:400px;margin:0 auto;">
-    <div style="text-align:center;margin-bottom:36px">
-      <div style="font-size:52px;margin-bottom:12px">📊</div>
-      <div style="font-family:'DM Sans',sans-serif;font-size:30px;font-weight:800;color:#fff;letter-spacing:-.5px;line-height:1.1">NetWorth <span style="color:#93c5fd">SG</span></div>
-      <div style="color:rgba(255,255,255,.7);font-size:14px;margin-top:8px">Your personal finance tracker,<br/>built for Singapore</div>
+    <div style="text-align:center;margin-bottom:20px">
+      <div style="font-size:42px;margin-bottom:8px">📊</div>
+      <div style="font-family:'DM Sans',sans-serif;font-size:28px;font-weight:800;color:#fff;letter-spacing:-.5px;line-height:1.1">NetWorth <span style="color:#93c5fd">SG</span></div>
+      <div style="color:rgba(255,255,255,.7);font-size:13px;margin-top:6px">Your personal finance tracker, built for Singapore</div>
+      <div style="color:rgba(255,255,255,.45);font-size:11px;margin-top:6px">Brought to you by <span style="color:rgba(255,255,255,.7);font-weight:600">ThatFinancialGal</span></div>
     </div>
-    <div style="background:rgba(255,255,255,.12);border-radius:20px;padding:22px;margin-bottom:16px">
-      <div style="font-size:13px;color:rgba(255,255,255,.9);line-height:1.9">
-        <div style="margin-bottom:8px">🏦 &nbsp;Track <b>CPF, SRS, cash, investments & property</b></div>
-        <div style="margin-bottom:8px">📈 &nbsp;See your <b>net worth grow</b> month by month</div>
-        <div style="margin-bottom:8px">🎯 &nbsp;<b>Retirement calculator</b> with CPF Life support</div>
-        <div style="margin-bottom:8px">💱 &nbsp;<b>Multi-currency</b> with per-month FX rates</div>
+    <div style="background:rgba(255,255,255,.12);border-radius:18px;padding:16px 18px;margin-bottom:10px">
+      <div style="font-size:13px;color:rgba(255,255,255,.9);line-height:1.75">
+        <div style="margin-bottom:5px">🏦 &nbsp;Track <b>CPF, SRS, cash, investments & property</b></div>
+        <div style="margin-bottom:5px">📈 &nbsp;See your <b>net worth grow</b> month by month</div>
+        <div style="margin-bottom:5px">🎯 &nbsp;<b>Retirement calculator</b> with CPF Life support</div>
+        <div style="margin-bottom:5px">💱 &nbsp;<b>Multi-currency</b> with live FX rates</div>
         <div>🔒 &nbsp;Your data stays <b>100% on your device</b></div>
       </div>
     </div>
-    <div style="background:rgba(255,255,255,.1);border-radius:16px;padding:18px;margin-bottom:28px">
-      <div style="font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.1em;color:rgba(255,255,255,.6);margin-bottom:10px">Getting Started</div>
-      <div style="font-size:13px;color:rgba(255,255,255,.85);line-height:1.9">
+    <div style="background:rgba(255,255,255,.1);border-radius:14px;padding:13px 16px;margin-bottom:10px">
+      <div style="font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.1em;color:rgba(255,255,255,.6);margin-bottom:7px">Getting Started</div>
+      <div style="font-size:12px;color:rgba(255,255,255,.85);line-height:1.75">
         <div>1️⃣ &nbsp;Tap <b>+ Month</b> to add your first entry</div>
         <div>2️⃣ &nbsp;Enter your end-of-month balances</div>
         <div>3️⃣ &nbsp;Watch your overview come alive</div>
       </div>
     </div>
-    <div style="background:rgba(255,255,255,.08);border-radius:14px;padding:14px;margin-bottom:28px">
-      <div style="font-size:11px;color:rgba(255,255,255,.6);line-height:1.7;text-align:center">
+    <div style="background:rgba(255,255,255,.08);border-radius:12px;padding:11px 14px;margin-bottom:18px">
+      <div style="font-size:11px;color:rgba(255,255,255,.6);line-height:1.6;text-align:center">
         💾 &nbsp;Export a JSON backup monthly from Settings to protect your data.
       </div>
     </div>
-    <button onclick="dismissWelcome()" style="width:100%;background:#fff;color:#1e3a8a;border:none;border-radius:16px;padding:17px;font-family:'DM Sans',sans-serif;font-size:16px;font-weight:800;cursor:pointer;letter-spacing:-.2px;">
+    <button onclick="dismissWelcome()" style="width:100%;background:#fff;color:#1e3a8a;border:none;border-radius:16px;padding:15px;font-family:'DM Sans',sans-serif;font-size:16px;font-weight:800;cursor:pointer;letter-spacing:-.2px;">
       Get Started →
     </button>
-    <div style="text-align:center;margin-top:16px;font-size:11px;color:rgba(255,255,255,.45)">All data is stored locally on your device only</div>
-    <div style="text-align:center;margin-top:12px;font-size:12px;color:rgba(255,255,255,.35)">Brought to you by <span style="color:rgba(255,255,255,.6);font-weight:600">ThatFinancialGal</span></div>
+    <div style="text-align:center;margin-top:12px;font-size:11px;color:rgba(255,255,255,.4)">All data is stored locally on your device only</div>
   </div>
 </div>
 
