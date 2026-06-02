@@ -173,15 +173,19 @@ select.inp{appearance:none;-webkit-appearance:none;background-image:url("data:im
     </div>
   </div>
   <div class="card">
-    <div class="lbl" style="margin-bottom:8px">Pie Chart — Asset Allocation</div>
     <div class="rb" style="margin-bottom:10px">
-      <div class="lbl" style="margin:0;font-size:10px">Select Month</div>
+      <div class="lbl" style="margin:0">Asset Allocation</div>
       <select class="inp" id="pie-month-sel" style="width:auto;padding:5px 28px 5px 10px;font-size:12px" onchange="renderPie()"></select>
+    </div>
+    <div class="tgg" style="margin-bottom:12px">
+      <button id="pie-all-btn" class="tg tga" style="font-size:12px" onclick="setPieMode('all')">Total</button>
+      <button id="pie-inv-btn" class="tg" style="font-size:12px" onclick="setPieMode('investable')">Investable only</button>
     </div>
     <div style="display:flex;align-items:center;gap:16px">
       <canvas id="c-pie" style="width:130px;height:130px;flex-shrink:0"></canvas>
       <div id="pie-legend" style="flex:1;font-size:12px"></div>
     </div>
+    <div id="pie-risk" style="display:none;margin-top:10px;padding:8px 12px;background:var(--s2);border-radius:10px;font-size:12px;color:var(--sub);line-height:1.6"></div>
   </div>
   <div class="card"><div class="lbl" style="margin-bottom:10px">Asset Breakdown</div><div id="d-acat"></div><div class="divr"></div><div class="lbl" style="margin-bottom:10px">Liability Breakdown</div><div id="d-lcat"></div></div>
   <div class="card"><div class="lbl" style="margin-bottom:8px">Growth Analysis</div><div id="d-gap"></div></div>
@@ -312,6 +316,9 @@ select.inp{appearance:none;-webkit-appearance:none;background-image:url("data:im
     <div style="margin-bottom:14px"><div class="lbl" style="margin:0">Personal Goals</div></div>
     <div id="goals-body"></div>
   </div>
+  <div id="r-disclaimer" style="display:none;padding:14px 18px 18px;font-size:11px;color:var(--sub);line-height:1.7;text-align:center">
+    ⚠️ All figures are estimates based on your inputs and assumed rates. This is not financial advice. Past performance of any asset does not guarantee future returns. Please consult a licensed financial adviser for personalised retirement planning.
+  </div>
   </div><!-- end v-accum -->
 </div><!-- end v-retire -->
 
@@ -438,6 +445,7 @@ select.inp{appearance:none;-webkit-appearance:none;background-image:url("data:im
       Get Started →
     </button>
     <div style="text-align:center;margin-top:12px;font-size:11px;color:rgba(255,255,255,.4)">All data is stored locally on your device only</div>
+    <div style="text-align:center;margin-top:8px;font-size:10px;color:rgba(255,255,255,.28);line-height:1.6;padding:0 8px">For personal tracking and estimation only. Not financial advice. Consult a licensed financial adviser for personalised guidance.</div>
   </div>
 </div>
 
@@ -624,6 +632,7 @@ function showView(id){
   if(id==='v-dash')renderDash();
   if(id==='v-retire'){loadRetire();renderGoals();}
   else{const rr=document.getElementById('r-result');if(rr)rr.innerHTML='';}
+  tourOnNavigate(id);
   if(id==='v-history'){_historySelectMode=false;_historySelected.clear();const b=document.getElementById('h-select-btn'),ba=document.getElementById('h-delete-bar'),s=document.getElementById('h-sub');if(b){b.textContent='Select';b.style.background='';b.style.color='';}if(ba)ba.style.display='none';if(s)s.textContent='All recorded months';renderHistory();}
   if(id==='v-settings')renderSettings();
 }
@@ -734,7 +743,67 @@ function drawBar(){
 }
 const PC=['#2563eb','#059669','#d97706','#7c3aed','#dc2626','#0891b2','#65a30d','#c026d3','#ea580c','#0f766e'];
 function drawPie(id,data){const c=document.getElementById(id);if(!c)return;const dpr=devicePixelRatio||1,S=Math.min(c.offsetWidth,c.offsetHeight)*dpr||130*dpr;c.width=S;c.height=S;const ctx=c.getContext('2d'),cx=S/2,cy=S/2,r=S*.42,ir=S*.24;const tot=data.reduce((s,d)=>s+d.value,0)||1;let a=-Math.PI/2;data.forEach(d=>{const sl=(d.value/tot)*Math.PI*2;ctx.beginPath();ctx.moveTo(cx,cy);ctx.arc(cx,cy,r,a,a+sl);ctx.closePath();ctx.fillStyle=d.color;ctx.fill();ctx.beginPath();ctx.arc(cx,cy,ir,0,Math.PI*2);ctx.fillStyle='#fff';ctx.fill();a+=sl;});}
-function renderPie(){const sel=document.getElementById('pie-month-sel');if(!sel)return;const m=D.months.find(x=>x.id===sel.value)||latest();if(!m)return;const ca={};D.accounts.filter(a=>a.type==='asset').forEach(a=>{const v=toSGD(m.values[a.id]||0,a.ccy);if(v>0)ca[a.category]=(ca[a.category]||0)+v;});const tot=Object.values(ca).reduce((s,v)=>s+v,0)||1;const data=Object.entries(ca).sort((a,b)=>b[1]-a[1]).map(([k,v],i)=>({label:k,value:v,color:PC[i%PC.length]}));drawPie('c-pie',data);const lg=document.getElementById('pie-legend');if(lg)lg.innerHTML=data.map(d=>`<div style="display:flex;align-items:center;gap:6px;margin-bottom:5px"><div style="width:10px;height:10px;border-radius:3px;background:${d.color};flex-shrink:0"></div><span style="flex:1">${escH(d.label)}</span><span style="font-weight:700;color:var(--sub)">${((d.value/tot)*100).toFixed(1)}%</span></div>`).join('');}
+let _pieMode='all';
+function setPieMode(mode){
+  _pieMode=mode;
+  document.getElementById('pie-all-btn').className='tg'+(mode==='all'?' tga':'');
+  document.getElementById('pie-inv-btn').className='tg'+(mode==='investable'?' tga':'');
+  renderPie();
+}
+
+function renderPie(){
+  const sel=document.getElementById('pie-month-sel');if(!sel)return;
+  const m=D.months.find(x=>x.id===sel.value)||latest();if(!m)return;
+  const fx=m.fxRates||D.fxRates;
+
+  // Exclude property accounts when in investable mode
+  const propIds=new Set(D.accounts.filter(a=>a.sub==='prop'||a.category==='Property').map(a=>a.id));
+
+  const ca={};
+  D.accounts.filter(a=>a.type==='asset').forEach(a=>{
+    if(_pieMode==='investable'&&propIds.has(a.id))return;
+    const v=toSGD(m.values[a.id]||0,a.ccy);
+    if(v>0)ca[a.category]=(ca[a.category]||0)+v;
+  });
+
+  const tot=Object.values(ca).reduce((s,v)=>s+v,0)||1;
+  const data=Object.entries(ca).sort((a,b)=>b[1]-a[1]).map(([k,v],i)=>({label:k,value:v,color:PC[i%PC.length]}));
+  drawPie('c-pie',data);
+
+  const lg=document.getElementById('pie-legend');
+  if(lg)lg.innerHTML=data.map(d=>`<div style="display:flex;align-items:center;gap:6px;margin-bottom:5px"><div style="width:10px;height:10px;border-radius:3px;background:${d.color};flex-shrink:0"></div><span style="flex:1">${escH(d.label)}</span><span style="font-weight:700;color:var(--sub)">${((d.value/tot)*100).toFixed(1)}%</span></div>`).join('');
+
+  // Risk commentary for investable mode
+  const riskEl=document.getElementById('pie-risk');
+  if(_pieMode==='investable'&&riskEl){
+    riskEl.style.display='block';
+    // Calculate key ratios
+    const cashPct=(ca['Cash & Bank']||0)/tot*100;
+    const invPct=Object.entries(ca).filter(([k])=>k==='Investments'||k==='SRS').reduce((s,[,v])=>s+v,0)/tot*100;
+    const cpfPct=(ca['CPF']||0)/tot*100;
+
+    let profile,commentary;
+    if(cashPct>=60){
+      profile='💰 Cash-heavy';
+      commentary=`${cashPct.toFixed(0)}% in cash — very conservative. Consider deploying more into investments to beat inflation over the long term.`;
+    } else if(cashPct>=40){
+      profile='🛡 Conservative';
+      commentary=`${cashPct.toFixed(0)}% in cash. Safe but may underperform inflation. Consider gradually increasing investment allocation.`;
+    } else if(invPct>=60){
+      profile='📈 Growth-oriented';
+      commentary=`${invPct.toFixed(0)}% in investments. Good growth potential. Ensure you have 3–6 months of expenses in cash as emergency buffer.`;
+    } else if(cpfPct>=50){
+      profile='🏛 CPF-heavy';
+      commentary=`${cpfPct.toFixed(0)}% in CPF — stable and predictable. Consider building your investable portfolio outside CPF for flexibility.`;
+    } else {
+      profile='⚖️ Balanced';
+      commentary=`Well-diversified across cash, investments and CPF. Review annually to ensure allocation still matches your risk appetite.`;
+    }
+    riskEl.innerHTML=`<b>${profile}</b><br/>${commentary}`;
+  } else if(riskEl){
+    riskEl.style.display='none';
+  }
+}
 
 // ── DASHBOARD ──
 function renderDash(){
@@ -1517,7 +1586,7 @@ function calcRetire(){try{
 
   <div class="divr"></div>
   <div style="font-size:10px;font-weight:800;text-transform:uppercase;letter-spacing:.08em;color:var(--green);margin-bottom:6px">After Retirement</div>
-  <div class="row"><span style="font-size:13px;color:var(--sub)">Monthly expenses at ${rAge} (inflation adj.)</span><span style="font-weight:700">${fS(infExp,true)}/mo</span></div>
+  <div class="row"><span style="font-size:13px;color:var(--sub)">Monthly expenses at ${rAge} <span style="font-weight:400;color:var(--muted);font-size:11px">(input ${fS(expPost,true)} × ${(inf*100).toFixed(1)}%/yr × ${ytr}yrs inflation)</span></span><span style="font-weight:700">${fS(infExp,true)}/mo</span></div>
   ${_reduceExp65?`<div class="row"><span style="font-size:13px;color:var(--sub)">Monthly expenses after 65 (−15%)</span><span style="font-weight:700;color:var(--green)">${fS(infExp65,true)}/mo</span></div>`:''}
   ${savPost>0?`<div class="row"><span style="font-size:13px;color:var(--sub)">Reinvested savings (${parseFloat((savPostRtn*100).toFixed(2))}%/yr)</span><span style="font-weight:700;color:var(--blue)">−${fS(savPost,true)}/mo</span></div>`:''}
   ${incPost>0?`<div class="row"><span style="font-size:13px;color:var(--sub)">Other income</span><span style="font-weight:700;color:var(--green)">−${fS(incPost,true)}/mo</span></div>`:''}
@@ -1525,6 +1594,9 @@ function calcRetire(){try{
   <div class="row" style="border-bottom:none"><span style="font-size:13px;color:var(--sub)">Net monthly drawdown from portfolio</span><span style="font-weight:700;color:var(--red)">${fS(nd,true)}/mo</span></div>
   </div>`;
   renderGoals();
+  // Disclaimer
+  const disc=document.getElementById('r-disclaimer');
+  if(disc)disc.style.display='block';
 }catch(err){console.error('calcRetire error:',err);}}
 
 // ── MONTH IN REVIEW COMMENTARY ──
@@ -1914,69 +1986,54 @@ let _tourActive=false;
 const TOUR_STEPS=[
   {
     step:'1 of 5',
-    target:'n-entry',          // spotlight this element
-    position:'above-nav',      // tooltip above the nav bar
-    title:'Add your first month',
-    body:'Tap <b>Add Month</b> below to enter your end-of-month balances. Start with your CPF, bank accounts and investments.',
-    btnLabel:'Tap Add Month →',
-    btnAction: ()=>{
-      dismissTour(false);      // hide tour temporarily
-      openNewMonth();
-      // Re-show tour on next step after a short delay
-      setTimeout(()=>advanceTour(1), 600);
-    }
+    target:'n-entry',
+    waitForView:'v-entry',   // advance when user taps this view
+    title:'Start here — Add Month',
+    body:'Tap the <b>+ Add Month</b> tab below to enter your first month\'s balances. Try it now.',
   },
   {
     step:'2 of 5',
     target:'n-dash',
-    position:'above-nav',
-    title:'Check your Overview',
-    body:'After saving an entry, your <b>Overview</b> dashboard shows your net worth, charts, CPF breakdown and asset allocation — all calculated automatically.',
-    btnLabel:'Go to Overview →',
-    btnAction: ()=>{
-      dismissTour(false);
-      showView('v-dash');
-      setTimeout(()=>advanceTour(2), 400);
-    }
+    waitForView:'v-dash',
+    title:'Your Overview dashboard',
+    body:'Now tap <b>Overview</b> to see your net worth, charts, CPF breakdown and asset allocation — all calculated automatically from your entries.',
   },
   {
     step:'3 of 5',
     target:'n-retire',
-    position:'above-nav',
+    waitForView:'v-retire',
     title:'Plan your retirement',
-    body:'The <b>Retire</b> tab calculates whether you can afford to retire based on your savings, expenses, CPF Life payout and investment returns.',
-    btnLabel:'Go to Retire →',
-    btnAction: ()=>{
-      dismissTour(false);
-      showView('v-retire');
-      setTimeout(()=>advanceTour(3), 400);
-    }
+    body:'Tap <b>Retire</b> to use the retirement calculator. Enter your age, expenses and savings rate to see if you\'re on track.',
   },
   {
     step:'4 of 5',
     target:'n-settings',
-    position:'above-nav',
-    title:'Customise in Settings',
-    body:'Go to <b>Settings</b> to rename accounts, add new ones, delete ones you don\'t use, and change currencies. Make it match your actual financial accounts.',
-    btnLabel:'Go to Settings →',
-    btnAction: ()=>{
-      dismissTour(false);
-      showView('v-settings');
-      setTimeout(()=>advanceTour(4), 400);
-    }
+    waitForView:'v-settings',
+    title:'Customise your accounts',
+    body:'Tap <b>Settings</b> to rename accounts, add new ones or change currencies. Make it match your actual accounts.',
   },
   {
     step:'5 of 5',
     target:'n-settings',
-    position:'above-nav',
+    waitForView:null,         // last step — has a Done button
     title:'Back up your data',
-    body:'Your data lives on your device only. Go to <b>Settings → Export Backup (JSON)</b> monthly and save it to iCloud or Google Drive. If you lose the file, you lose your data.',
-    btnLabel:"Got it — let's go! 🚀",
-    btnAction: ()=>{
-      dismissTour(true);
-    }
+    body:'Go to <b>Settings → Export Backup (JSON)</b> monthly and save it to iCloud or Google Drive. Your data is stored only on this device.',
   },
 ];
+
+// Called from showView — advances tour if user navigated to the expected view
+function tourOnNavigate(viewId){
+  if(!_tourActive)return;
+  const s=TOUR_STEPS[_tourStep];
+  if(s&&s.waitForView===viewId){
+    // Small delay so the view renders first
+    setTimeout(()=>{
+      if(_tourStep<TOUR_STEPS.length-1){
+        advanceTour(_tourStep+1);
+      }
+    },350);
+  }
+}
 
 function advanceTour(step){
   _tourStep=step;
@@ -1987,21 +2044,14 @@ function advanceTour(step){
 
 function renderTourStep(step){
   const s=TOUR_STEPS[step];
-
-  // Spotlight the target nav item
   const targetEl=document.getElementById(s.target);
   const navEl=document.querySelector('.nav');
-
-  // Position tooltip above the nav bar
   const navH=navEl?navEl.offsetHeight:80;
   const tip=document.getElementById('tour-tip');
-  const safeB=parseInt(getComputedStyle(document.documentElement).getPropertyValue('--safe-b'))||0;
 
-  // Place tooltip just above the nav
   tip.style.bottom=(navH+12)+'px';
   tip.style.top='auto';
 
-  // Spotlight overlays — highlight the target nav item
   if(targetEl){
     const r=targetEl.getBoundingClientRect();
     const pad=8;
@@ -2011,19 +2061,24 @@ function renderTourStep(step){
     document.getElementById('tour-overlay-r').style.cssText=`position:absolute;top:${r.top-pad}px;left:${r.right+pad}px;right:0;height:${r.height+pad*2}px;background:rgba(0,0,0,.55);`;
   }
 
-  // Step label, title, body
   document.getElementById('tour-step-label').textContent=s.step;
   document.getElementById('tour-title').innerHTML=s.title;
   document.getElementById('tour-body').innerHTML=s.body;
 
-  // Dots
   const dotsEl=document.getElementById('tour-dots');
   dotsEl.innerHTML=TOUR_STEPS.map((_,i)=>`<div style="width:${i===step?'20px':'6px'};height:6px;border-radius:3px;background:${i===step?'var(--blue)':'var(--border2)'};transition:all .3s;"></div>`).join('');
 
-  // Action button
   const btn=document.getElementById('tour-action-btn');
-  btn.textContent=s.btnLabel;
-  btn.onclick=s.btnAction;
+  const isLast=step===TOUR_STEPS.length-1;
+  if(isLast){
+    // Last step: show Done button
+    btn.textContent="Got it — let's go! 🚀";
+    btn.style.display='block';
+    btn.onclick=()=>dismissTour(true);
+  } else {
+    // Other steps: hide button — user navigates by tapping the actual tab
+    btn.style.display='none';
+  }
 }
 
 function showTour(){
