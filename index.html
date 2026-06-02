@@ -130,6 +130,8 @@ select.inp{appearance:none;-webkit-appearance:none;background-image:url("data:im
       <div id="spark-tip" style="display:none;position:absolute;top:4px;right:0;background:rgba(0,0,0,.7);color:#fff;padding:4px 10px;border-radius:8px;font-size:11px;font-weight:700;pointer-events:none;white-space:nowrap;"></div>
     </div>
   </div>
+  <!-- Month in Review commentary card -->
+  <div id="d-commentary" style="display:none;margin:0 14px 10px;background:#fff;border-radius:20px;padding:16px 18px;border:1px solid var(--border)"></div>
   <div class="g2">
     <div class="mc" style="cursor:pointer" onclick="openBreakdownModal('asset')"><div class="lbl">Assets <span style="font-size:9px">▸</span></div><div class="lg pos" id="d-a">—</div><div id="d-ad" style="font-size:12px;margin-top:3px"></div></div>
     <div class="mc" style="cursor:pointer" onclick="openBreakdownModal('liability')"><div class="lbl">Liabilities <span style="font-size:9px">▸</span></div><div class="lg neg" id="d-l">—</div><div id="d-ld" style="font-size:12px;margin-top:3px"></div></div>
@@ -750,6 +752,7 @@ function renderDash(){
     document.getElementById('d-acat').innerHTML='<div style="color:var(--sub);font-size:13px">No data yet.</div>';
     document.getElementById('d-lcat').innerHTML='<div style="color:var(--sub);font-size:13px">No data yet.</div>';
     document.getElementById('d-gap').innerHTML='<div style="color:var(--sub);font-size:13px">Add at least 3 months to see growth analysis.</div>';
+    const cd=document.getElementById('d-commentary');if(cd)cd.style.display='none';
     document.getElementById('d-fx').textContent='';
     ['c-spark','c-bar','c-pie'].forEach(id=>{const c=document.getElementById(id);if(c){const ctx=c.getContext('2d');ctx.clearRect(0,0,c.width,c.height);}});
     const ps=document.getElementById('pie-month-sel');if(ps)ps.innerHTML='';
@@ -817,6 +820,7 @@ function renderDash(){
   }else{document.getElementById('d-gap').innerHTML='<div style="color:var(--sub);font-size:13px">Add at least 3 months to see growth analysis.</div>';}
   // Goals
   const aFX=lm.fxRates||D.fxRates;document.getElementById('d-fx').textContent='FX ('+(lm.fxRates?lm.label:'default')+'): '+Object.entries(aFX).map(([k,v])=>k+'→'+v).join(' · ');
+  renderCommentary();
 }
 
 function openBreakdownModal(type){
@@ -1455,7 +1459,84 @@ function calcRetire(){try{
   renderGoals();
 }catch(err){console.error('calcRetire error:',err);}}
 
-// ── GOALS ──
+// ── MONTH IN REVIEW COMMENTARY ──
+function renderCommentary(){
+  const card=document.getElementById('d-commentary');
+  if(!card)return;
+  const lm=latest();
+  if(!lm){card.style.display='none';return;}
+
+  const sm=sortedMonths();
+  const pm=sm.length>=2?sm[sm.length-2]:null;
+  const lv=lm.values,pv=pm?pm.values:{};
+
+  // Helper: sum accounts by sub type
+  const sumSub=(vals,subs)=>D.accounts.filter(a=>subs.includes(a.sub)).reduce((s,a)=>s+toSGD(vals[a.id]||0,a.ccy),0);
+
+  const curNW=calcNW(lv).net;
+  const prevNW=pm?calcNW(pv).net:null;
+  const delta=pm?curNW-prevNW:null;
+
+  // Category deltas
+  const cats=[
+    {label:'CPF',subs:['cpf'],icon:'🏛'},
+    {label:'Cash & Bank',subs:['bank'],icon:'🏦'},
+    {label:'Investments',subs:['inv'],icon:'📈'},
+    {label:'SRS',subs:['srs'],icon:'💼'},
+    {label:'Property',subs:['prop'],icon:'🏠'},
+    {label:'Insurance',subs:['ins'],icon:'🛡'},
+  ];
+  const liabDelta=pm?(calcNW(lv).liabilities-calcNW(pv).liabilities):null;
+
+  let lines=[];
+
+  if(!pm){
+    // First entry
+    const assets=calcNW(lv).assets;
+    const liabs=calcNW(lv).liabilities;
+    lines.push(`<div style="font-size:13px;color:var(--sub);line-height:1.75">Welcome! Your starting net worth is <b>${fS(curNW,true)}</b>.<br/><br/>`);
+    if(assets>0) lines.push(`💚 Assets: <b>${fS(assets,true)}</b> across your accounts.<br/>`);
+    if(liabs>0)  lines.push(`🔴 Liabilities: <b>${fS(liabs,true)}</b> in loans and credit.<br/>`);
+    lines.push(`<br/>Add next month's data to start tracking your progress.</div>`);
+  } else {
+    // Subsequent month — show movers
+    const movers=[];
+    cats.forEach(c=>{
+      const cur=sumSub(lv,c.subs),prev=sumSub(pv,c.subs),d=cur-prev;
+      if(Math.abs(d)>100) movers.push({...c,d});
+    });
+    // Sort by absolute change descending
+    movers.sort((a,b)=>Math.abs(b.d)-Math.abs(a.d));
+
+    lines.push(`<div style="font-size:13px;color:var(--sub);line-height:1.85">`);
+    if(movers.length===0&&Math.abs(liabDelta||0)<=100){
+      lines.push(`No significant changes this month. Keep building! 💪`);
+    } else {
+      movers.slice(0,3).forEach(m=>{
+        const sign=m.d>0?'💚':'🔴';
+        const word=m.d>0?'up':'down';
+        lines.push(`${sign} <b>${m.label}</b> ${word} <b>${fS(Math.abs(m.d),true)}</b><br/>`);
+      });
+      if(liabDelta&&Math.abs(liabDelta)>100){
+        if(liabDelta>0) lines.push(`🔴 <b>Liabilities</b> increased by <b>${fS(liabDelta,true)}</b> — worth watching.<br/>`);
+        else            lines.push(`💚 <b>Liabilities</b> reduced by <b>${fS(Math.abs(liabDelta),true)}</b> — great progress.<br/>`);
+      }
+    }
+    lines.push(`</div>`);
+  }
+
+  const isFirst=!pm;
+  const title=isFirst?`📊 ${lm.label} — First Entry`:`📊 ${lm.label} — Month in Review`;
+  const subtitle=delta!==null
+    ?`Net worth <span style="font-weight:800;color:${delta>=0?'var(--green)':'var(--red)'}">${delta>=0?'+':''}${fS(delta,true)}</span> vs last month`
+    :'';
+
+  card.style.display='block';
+  card.innerHTML=`
+    <div style="font-size:12px;font-weight:800;text-transform:uppercase;letter-spacing:.08em;color:var(--sub);margin-bottom:6px">${title}</div>
+    ${subtitle?`<div style="font-size:13px;margin-bottom:10px">${subtitle}</div>`:''}
+    ${lines.join('')}`;
+}
 function renderGoals(){
   if(!document.getElementById('goals-body'))return;
   const lm=latest(),curSGD=lm?calcNW(lm.values).net:0;
