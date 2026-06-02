@@ -773,11 +773,10 @@ function renderPie(){
   const lg=document.getElementById('pie-legend');
   if(lg)lg.innerHTML=data.map(d=>`<div style="display:flex;align-items:center;gap:6px;margin-bottom:5px"><div style="width:10px;height:10px;border-radius:3px;background:${d.color};flex-shrink:0"></div><span style="flex:1">${escH(d.label)}</span><span style="font-weight:700;color:var(--sub)">${((d.value/tot)*100).toFixed(1)}%</span></div>`).join('');
 
-  // Risk commentary for investable mode
+  // Risk commentary for excl property mode
   const riskEl=document.getElementById('pie-risk');
   if(_pieMode==='investable'&&riskEl){
     riskEl.style.display='block';
-    // Calculate key ratios
     const cashPct=(ca['Cash & Bank']||0)/tot*100;
     const invPct=Object.entries(ca).filter(([k])=>k==='Investments'||k==='SRS').reduce((s,[,v])=>s+v,0)/tot*100;
     const cpfPct=(ca['CPF']||0)/tot*100;
@@ -785,23 +784,46 @@ function renderPie(){
     let profile,commentary;
     if(cashPct>=60){
       profile='💰 Cash-heavy';
-      commentary=`${cashPct.toFixed(0)}% in cash — very conservative. Consider deploying more into investments to beat inflation over the long term.`;
+      commentary=`${cashPct.toFixed(0)}% in cash. High liquidity but may underperform inflation over time.`;
     } else if(cashPct>=40){
       profile='🛡 Conservative';
-      commentary=`${cashPct.toFixed(0)}% in cash. Safe but may underperform inflation. Consider gradually increasing investment allocation.`;
+      commentary=`${cashPct.toFixed(0)}% in cash. Relatively safe allocation with limited growth exposure.`;
     } else if(invPct>=60){
       profile='📈 Growth-oriented';
-      commentary=`${invPct.toFixed(0)}% in investments. Good growth potential. Ensure you have 3–6 months of expenses in cash as emergency buffer.`;
+      commentary=`${invPct.toFixed(0)}% in investments. High growth exposure. Ensure you have sufficient cash buffer for emergencies.`;
     } else if(cpfPct>=50){
       profile='🏛 CPF-heavy';
-      commentary=`${cpfPct.toFixed(0)}% in CPF — stable and predictable. Consider building your investable portfolio outside CPF for flexibility.`;
+      commentary=`${cpfPct.toFixed(0)}% in CPF — stable returns at 2.5–4% but limited flexibility outside of CPF.`;
     } else {
       profile='⚖️ Balanced';
-      commentary=`Well-diversified across cash, investments and CPF. Review annually to ensure allocation still matches your risk appetite.`;
+      commentary=`Spread across cash, investments and CPF. No single category dominates your investable assets.`;
     }
-    riskEl.innerHTML=`<b>${profile}</b><br/>${commentary}`;
+    riskEl.innerHTML=`<b>${profile}</b><br/>${commentary}<br/><span style="font-size:11px;color:var(--muted)">This is an observation, not financial advice.</span>`;
   } else if(riskEl){
     riskEl.style.display='none';
+  }
+
+  // Fix: update asset breakdown to exclude property when in excl property mode
+  const acatEl=document.getElementById('d-acat');
+  if(acatEl&&m){
+    const lAssets=latest()?latest().values:{};
+    const lFull=latest()?calcNW(latest().values):null;
+    const cAf={};
+    D.accounts.filter(a=>a.type==='asset').forEach(a=>{
+      if(_pieMode==='investable'&&(a.sub==='prop'||a.category==='Property'))return;
+      const v=toSGD(lAssets[a.id]||0,a.ccy);
+      if(v>0)cAf[a.category]=(cAf[a.category]||0)+v;
+    });
+    const totAf=Object.values(cAf).reduce((s,v)=>s+v,0)||1;
+    let aHf='';
+    Object.entries(cAf).sort((a,b)=>b[1]-a[1]).forEach(([cat,val])=>{
+      const pct=Math.round(val/totAf*100);
+      aHf+=`<div style="margin-bottom:10px"><div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:3px"><span style="font-size:13px">${escH(cat)}</span><span style="font-size:13px;font-weight:700">${fS(val,true)} <span style="color:var(--sub);font-weight:400">(${pct}%)</span></span></div><div class="bar-t"><div class="bar-f" style="width:${pct}%;background:var(--green)"></div></div></div>`;
+    });
+    acatEl.innerHTML=aHf||'<div style="color:var(--sub);font-size:13px">No assets.</div>';
+    // Label
+    const lbl=document.querySelector('#d-acat').previousElementSibling;
+    if(lbl&&lbl.className==='lbl')lbl.textContent=_pieMode==='investable'?'Asset Breakdown (excl. property)':'Asset Breakdown';
   }
 }
 
