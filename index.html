@@ -771,6 +771,67 @@ function renderDash(){
   const cpfA=D.accounts.filter(a=>a.sub==='cpf');let cpfT=0,cpfH='';
   cpfA.forEach(a=>{const v=lm.values[a.id]||0;cpfT+=v;const lb={'cpf-oa':'OA','cpf-sa':'SA','cpf-ma':'MA','cpf-ra':'RA'}[a.id]||a.name;cpfH+=`<div class="row" style="padding:7px 0"><span style="font-size:13px;color:var(--sub)">${lb}</span><span style="font-weight:700">${fS(v,true)}</span></div>`;});
   cpfH+=`<div style="padding-top:8px;border-top:1px solid var(--border);display:flex;justify-content:space-between"><span style="font-size:13px;font-weight:700">Total CPF</span><span style="font-family:'DM Sans',sans-serif;font-size:16px;font-weight:700;color:var(--gold)">${fS(cpfT,true)}</span></div>`;
+
+  // CPF Retirement Sum Tracker
+  // SA + OA count toward FRS (MA excluded — MediSave only)
+  // Use year from retire tab age input to determine which year's sums apply
+  const userAge=parseFloat(document.getElementById('r-age')&&document.getElementById('r-age').value)||0;
+  const currentYear=new Date().getFullYear();
+  const ageAt55Year=userAge>0?currentYear+(55-userAge):currentYear;
+  // CPF retirement sums — confirmed figures (3.5%/yr increase from 2023-2027)
+  const RS={
+    2025:{brs:102900,frs:205800,ers:308700},
+    2026:{brs:110200,frs:220400,ers:440800},
+    2027:{brs:114100,frs:228200,ers:456400},
+  };
+  // Use the year the user turns 55, capped at known range
+  const rsYear=Math.min(Math.max(ageAt55Year,2025),2027);
+  const rs=RS[rsYear]||RS[2026];
+
+  const oaVal=lm.values['cpf-oa']||0;
+  const saVal=lm.values['cpf-sa']||0;
+  const raVal=lm.values['cpf-ra']||0;
+  // Before 55: SA + OA; at/after 55: RA is the retirement account
+  const retireBase=userAge>=55?raVal:(saVal+oaVal);
+  const pctBRS=Math.min(retireBase/rs.brs*100,100);
+  const pctFRS=Math.min(retireBase/rs.frs*100,100);
+  const pctERS=Math.min(retireBase/rs.ers*100,100);
+  const tier=retireBase>=rs.ers?'ERS':retireBase>=rs.frs?'FRS':retireBase>=rs.brs?'BRS':'Below BRS';
+  const tierColor=retireBase>=rs.frs?'var(--green)':retireBase>=rs.brs?'var(--gold)':'var(--red)';
+
+  // Projected age to hit FRS (SA grows 4%, OA grows 2.5%)
+  let projFRSAge=null;
+  if(userAge>0&&userAge<55&&retireBase<rs.frs){
+    let sa=saVal,oa=oaVal;
+    for(let yr=0;yr<30;yr++){
+      sa=sa*1.04;oa=oa*1.025;
+      if(sa+oa>=rs.frs){projFRSAge=Math.round(userAge+yr+1);break;}
+    }
+  }
+
+  cpfH+=`<div style="margin-top:14px;padding-top:12px;border-top:2px solid var(--border2)">
+    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px">
+      <div style="font-size:11px;font-weight:800;text-transform:uppercase;letter-spacing:.08em">Retirement Sum Progress (${rsYear})</div>
+      <span style="font-size:11px;font-weight:800;color:${tierColor};background:${retireBase>=rs.frs?'var(--green-dim)':retireBase>=rs.brs?'var(--gold-dim)':'var(--red-dim)'};padding:2px 8px;border-radius:6px">${tier}</span>
+    </div>
+    <div style="font-size:11px;color:var(--sub);margin-bottom:10px">${userAge>=55?'Based on RA balance':'Based on SA + OA (grows at 4% + 2.5%/yr)'}</div>
+    ${[
+      {label:'BRS',val:rs.brs,pct:pctBRS},
+      {label:'FRS',val:rs.frs,pct:pctFRS},
+      {label:'ERS',val:rs.ers,pct:pctERS},
+    ].map(t=>`
+    <div style="margin-bottom:8px">
+      <div style="display:flex;justify-content:space-between;margin-bottom:3px">
+        <span style="font-size:12px;color:var(--sub)">${t.label} <span style="color:var(--muted)">${fS(t.val,true)}</span></span>
+        <span style="font-size:12px;font-weight:700;color:${t.pct>=100?'var(--green)':'var(--sub)'}">${t.pct.toFixed(0)}%${t.pct>=100?' ✓':''}</span>
+      </div>
+      <div style="height:6px;background:var(--border2);border-radius:4px;overflow:hidden">
+        <div style="height:6px;width:${t.pct}%;background:${t.pct>=100?'var(--green)':t.pct>=50?'var(--gold)':'var(--red)'};border-radius:4px;transition:width .4s ease"></div>
+      </div>
+    </div>`).join('')}
+    ${projFRSAge?`<div style="font-size:12px;color:var(--sub);margin-top:8px;padding:8px 10px;background:var(--blue-dim);border-radius:8px;border:1px solid var(--blue-mid)">📈 Projected to reach <b>FRS</b> at age <b style="color:var(--blue)">${projFRSAge}</b> (SA at 4%, OA at 2.5% — contributions not included)</div>`:''}
+  </div>`;
+
   document.getElementById('cpf-body').innerHTML=cpfH;
   // NW variants
   const propIds=D.accounts.filter(a=>a.sub==='prop'||a.category==='Property').map(a=>a.id);
