@@ -1469,85 +1469,70 @@ function renderCommentary(){
   const sm=sortedMonths();
   const pm=sm.length>=2?sm[sm.length-2]:null;
   const lv=lm.values, pv=pm?pm.values:{};
-  // Use each month's own FX rates for accurate comparison
   const lFX=lm.fxRates||D.fxRates;
   const pFX=pm?(pm.fxRates||D.fxRates):D.fxRates;
   const toSGD2=(v,ccy,fx)=>ccy&&ccy!=='SGD'?v*(fx[ccy]||1):v;
-
-  // Sum accounts by sub-type using correct monthly FX
-  const sumSub=(vals,fx,subs)=>D.accounts
-    .filter(a=>subs.includes(a.sub))
-    .reduce((s,a)=>s+toSGD2(vals[a.id]||0,a.ccy,fx),0);
 
   const curNW=calcNW(lv,lFX).net;
   const prevNW=pm?calcNW(pv,pFX).net:null;
   const delta=pm?curNW-prevNW:null;
 
-  // Category groups by sub type
-  const cats=[
-    {label:'CPF',       subs:['cpf']},
-    {label:'Cash & Bank',subs:['bank']},
-    {label:'Investments',subs:['inv']},
-    {label:'SRS',       subs:['srs']},
-    {label:'Property',  subs:['prop']},
-    {label:'Insurance', subs:['ins']},
-  ];
-  const liabDelta=pm?(calcNW(lv,lFX).liabilities-calcNW(pv,pFX).liabilities):null;
-
-  let lines=[];
+  card.style.display='block';
 
   if(!pm){
-    const assets=calcNW(lv,lFX).assets;
-    const liabs=calcNW(lv,lFX).liabilities;
-    lines.push(`<div style="font-size:13px;color:var(--sub);line-height:1.75">Welcome! Your starting net worth is <b>${fS(curNW,true)}</b>.<br/><br/>`);
-    if(assets>0) lines.push(`💚 Assets: <b>${fS(assets,true)}</b> across your accounts.<br/>`);
-    if(liabs>0)  lines.push(`🔴 Liabilities: <b>${fS(liabs,true)}</b> in loans and credit.<br/>`);
-    lines.push(`<br/>Add next month's data to start tracking your progress.</div>`);
-  } else {
-    const movers=[];
-    cats.forEach(c=>{
-      const cur=sumSub(lv,lFX,c.subs);
-      const prev=sumSub(pv,pFX,c.subs);
-      const d=cur-prev;
-      if(Math.abs(d)>100) movers.push({...c,d});
-    });
-    // Also catch any accounts not covered by known subs (custom accounts)
-    const knownSubs=['cpf','bank','inv','srs','prop','ins','loan','credit'];
-    const customCur=D.accounts.filter(a=>a.type==='asset'&&!knownSubs.includes(a.sub)).reduce((s,a)=>s+toSGD2(lv[a.id]||0,a.ccy,lFX),0);
-    const customPrev=D.accounts.filter(a=>a.type==='asset'&&!knownSubs.includes(a.sub)).reduce((s,a)=>s+toSGD2(pv[a.id]||0,a.ccy,pFX),0);
-    const customD=customCur-customPrev;
-    if(Math.abs(customD)>100) movers.push({label:'Other assets',subs:[],d:customD});
-
-    movers.sort((a,b)=>Math.abs(b.d)-Math.abs(a.d));
-
-    lines.push(`<div style="font-size:13px;color:var(--sub);line-height:1.85">`);
-    if(movers.length===0&&Math.abs(liabDelta||0)<=100){
-      lines.push(`No significant changes this month. Keep building! 💪`);
-    } else {
-      movers.slice(0,3).forEach(m=>{
-        const sign=m.d>0?'💚':'🔴';
-        const word=m.d>0?'up':'down';
-        lines.push(`${sign} <b>${m.label}</b> ${word} <b>${fS(Math.abs(m.d),true)}</b><br/>`);
-      });
-      if(liabDelta&&Math.abs(liabDelta)>100){
-        if(liabDelta>0) lines.push(`🔴 <b>Liabilities</b> increased by <b>${fS(liabDelta,true)}</b> — worth watching.<br/>`);
-        else            lines.push(`💚 <b>Liabilities</b> reduced by <b>${fS(Math.abs(liabDelta),true)}</b> — great progress.<br/>`);
-      }
-    }
-    lines.push(`</div>`);
+    card.innerHTML=`
+      <div style="font-size:12px;font-weight:800;text-transform:uppercase;letter-spacing:.08em;color:var(--sub);margin-bottom:6px">\u{1F4CA} ${lm.label} \u2014 First Entry</div>
+      <div style="font-size:13px;color:var(--sub)">Starting net worth <b style="color:var(--text)">${fS(curNW,true)}</b>. Add next month to start tracking changes.</div>`;
+    return;
   }
 
-  const isFirst=!pm;
-  const title=isFirst?`📊 ${lm.label} — First Entry`:`📊 ${lm.label} — Month in Review`;
+  const cats=[...new Set(D.accounts.map(a=>a.category))];
+  const catSummary=[];
+  let detailRows='';
+  let hasChanges=false;
+
+  cats.forEach(cat=>{
+    const catAccs=D.accounts.filter(a=>a.category===cat);
+    let catTotal=0;
+    let catRows='';
+    catAccs.forEach(acc=>{
+      const cur=toSGD2(lv[acc.id]||0,acc.ccy,lFX);
+      const prev=toSGD2(pv[acc.id]||0,acc.ccy,pFX);
+      const d=cur-prev;
+      if(Math.abs(d)<1)return;
+      hasChanges=true;
+      catTotal+=d;
+      const isLiab=acc.type==='liability';
+      const isGood=isLiab?d<0:d>0;
+      catRows+=`<div style="display:flex;justify-content:space-between;padding:3px 0 3px 10px;border-bottom:1px solid var(--border)"><span style="font-size:12px;color:var(--sub);flex:1;padding-right:8px">${escH(acc.name)}</span><span style="font-size:12px;font-weight:700;color:${isGood?'var(--green)':'var(--red)'};white-space:nowrap">${d>0?'+':''}${fS(d,true)}</span></div>`;
+    });
+    if(catRows){
+      const isLiabCat=catAccs[0]&&catAccs[0].type==='liability';
+      const catGood=isLiabCat?catTotal<0:catTotal>0;
+      catSummary.push({label:cat,d:catTotal,good:catGood});
+      detailRows+=`<div style="margin-bottom:10px"><div style="display:flex;justify-content:space-between;padding:5px 0;border-bottom:2px solid var(--border2)"><span style="font-size:11px;font-weight:800;text-transform:uppercase;letter-spacing:.06em">${escH(cat)}</span><span style="font-size:12px;font-weight:800;color:${catGood?'var(--green)':'var(--red)'}">${catTotal>0?'+':''}${fS(catTotal,true)}</span></div>${catRows}</div>`;
+    }
+  });
+
+  catSummary.sort((a,b)=>Math.abs(b.d)-Math.abs(a.d));
+  const summaryLines=catSummary.slice(0,3).map(c=>
+    `<span style="color:${c.good?'var(--green)':'var(--red)'}">\u25CF</span> <b>${escH(c.label)}</b> ${c.d>0?'+':''}${fS(c.d,true)}`
+  ).join(' &nbsp;·&nbsp; ');
+
   const subtitle=delta!==null
-    ?`Net worth <span style="font-weight:800;color:${delta>=0?'var(--green)':'var(--red)'}">${delta>=0?'+':''}${fS(delta,true)}</span> vs last month`
+    ?`Net worth <span style="font-weight:800;color:${delta>=0?'var(--green)':'var(--red)'}">${delta>=0?'+':''}${fS(delta,true)}</span> vs ${pm.label}`
     :'';
 
-  card.style.display='block';
+  const uid='comm-'+lm.id;
   card.innerHTML=`
-    <div style="font-size:12px;font-weight:800;text-transform:uppercase;letter-spacing:.08em;color:var(--sub);margin-bottom:6px">${title}</div>
-    ${subtitle?`<div style="font-size:13px;margin-bottom:10px">${subtitle}</div>`:''}
-    ${lines.join('')}`;
+    <div style="font-size:12px;font-weight:800;text-transform:uppercase;letter-spacing:.08em;color:var(--sub);margin-bottom:6px">\u{1F4CA} ${lm.label} \u2014 Month in Review</div>
+    ${subtitle?`<div style="font-size:13px;margin-bottom:8px">${subtitle}</div>`:''}
+    ${hasChanges
+      ?`<div style="font-size:12px;color:var(--sub);line-height:2;margin-bottom:10px">${summaryLines}</div>
+        <button id="comm-btn-${lm.id}" onclick="(function(){const d=document.getElementById('${uid}');const b=document.getElementById('comm-btn-${lm.id}');const open=d.style.display!=='none';d.style.display=open?'none':'block';b.textContent=open?'View details \u25BE':'Hide details \u25B4';})()"
+          style="background:none;border:none;font-size:12px;font-weight:700;color:var(--blue);cursor:pointer;padding:0">View details \u25BE</button>
+        <div id="${uid}" style="display:none;margin-top:10px">${detailRows}</div>`
+      :`<div style="font-size:13px;color:var(--sub)">No changes this month. Keep building! \u{1F4AA}</div>`}`;
 }
 function renderGoals(){
   if(!document.getElementById('goals-body'))return;
