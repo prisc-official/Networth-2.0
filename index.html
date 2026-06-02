@@ -1468,44 +1468,56 @@ function renderCommentary(){
 
   const sm=sortedMonths();
   const pm=sm.length>=2?sm[sm.length-2]:null;
-  const lv=lm.values,pv=pm?pm.values:{};
+  const lv=lm.values, pv=pm?pm.values:{};
+  // Use each month's own FX rates for accurate comparison
+  const lFX=lm.fxRates||D.fxRates;
+  const pFX=pm?(pm.fxRates||D.fxRates):D.fxRates;
+  const toSGD2=(v,ccy,fx)=>ccy&&ccy!=='SGD'?v*(fx[ccy]||1):v;
 
-  // Helper: sum accounts by sub type
-  const sumSub=(vals,subs)=>D.accounts.filter(a=>subs.includes(a.sub)).reduce((s,a)=>s+toSGD(vals[a.id]||0,a.ccy),0);
+  // Sum accounts by sub-type using correct monthly FX
+  const sumSub=(vals,fx,subs)=>D.accounts
+    .filter(a=>subs.includes(a.sub))
+    .reduce((s,a)=>s+toSGD2(vals[a.id]||0,a.ccy,fx),0);
 
-  const curNW=calcNW(lv).net;
-  const prevNW=pm?calcNW(pv).net:null;
+  const curNW=calcNW(lv,lFX).net;
+  const prevNW=pm?calcNW(pv,pFX).net:null;
   const delta=pm?curNW-prevNW:null;
 
-  // Category deltas
+  // Category groups by sub type
   const cats=[
-    {label:'CPF',subs:['cpf'],icon:'🏛'},
-    {label:'Cash & Bank',subs:['bank'],icon:'🏦'},
-    {label:'Investments',subs:['inv'],icon:'📈'},
-    {label:'SRS',subs:['srs'],icon:'💼'},
-    {label:'Property',subs:['prop'],icon:'🏠'},
-    {label:'Insurance',subs:['ins'],icon:'🛡'},
+    {label:'CPF',       subs:['cpf']},
+    {label:'Cash & Bank',subs:['bank']},
+    {label:'Investments',subs:['inv']},
+    {label:'SRS',       subs:['srs']},
+    {label:'Property',  subs:['prop']},
+    {label:'Insurance', subs:['ins']},
   ];
-  const liabDelta=pm?(calcNW(lv).liabilities-calcNW(pv).liabilities):null;
+  const liabDelta=pm?(calcNW(lv,lFX).liabilities-calcNW(pv,pFX).liabilities):null;
 
   let lines=[];
 
   if(!pm){
-    // First entry
-    const assets=calcNW(lv).assets;
-    const liabs=calcNW(lv).liabilities;
+    const assets=calcNW(lv,lFX).assets;
+    const liabs=calcNW(lv,lFX).liabilities;
     lines.push(`<div style="font-size:13px;color:var(--sub);line-height:1.75">Welcome! Your starting net worth is <b>${fS(curNW,true)}</b>.<br/><br/>`);
     if(assets>0) lines.push(`💚 Assets: <b>${fS(assets,true)}</b> across your accounts.<br/>`);
     if(liabs>0)  lines.push(`🔴 Liabilities: <b>${fS(liabs,true)}</b> in loans and credit.<br/>`);
     lines.push(`<br/>Add next month's data to start tracking your progress.</div>`);
   } else {
-    // Subsequent month — show movers
     const movers=[];
     cats.forEach(c=>{
-      const cur=sumSub(lv,c.subs),prev=sumSub(pv,c.subs),d=cur-prev;
+      const cur=sumSub(lv,lFX,c.subs);
+      const prev=sumSub(pv,pFX,c.subs);
+      const d=cur-prev;
       if(Math.abs(d)>100) movers.push({...c,d});
     });
-    // Sort by absolute change descending
+    // Also catch any accounts not covered by known subs (custom accounts)
+    const knownSubs=['cpf','bank','inv','srs','prop','ins','loan','credit'];
+    const customCur=D.accounts.filter(a=>a.type==='asset'&&!knownSubs.includes(a.sub)).reduce((s,a)=>s+toSGD2(lv[a.id]||0,a.ccy,lFX),0);
+    const customPrev=D.accounts.filter(a=>a.type==='asset'&&!knownSubs.includes(a.sub)).reduce((s,a)=>s+toSGD2(pv[a.id]||0,a.ccy,pFX),0);
+    const customD=customCur-customPrev;
+    if(Math.abs(customD)>100) movers.push({label:'Other assets',subs:[],d:customD});
+
     movers.sort((a,b)=>Math.abs(b.d)-Math.abs(a.d));
 
     lines.push(`<div style="font-size:13px;color:var(--sub);line-height:1.85">`);
