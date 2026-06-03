@@ -139,9 +139,9 @@ select.inp{appearance:none;-webkit-appearance:none;background-image:url("data:im
   <div class="card"><div class="rb" style="margin-bottom:10px"><div class="lbl" style="margin:0">CPF Overview</div><span class="tag tc">CPF</span></div><div id="cpf-body"></div></div>
   <div class="card">
     <div class="lbl">Net Worth Breakdown</div>
-    <div class="row"><span style="font-size:13px;color:var(--sub)">Total Net Worth</span><span style="font-weight:800;font-size:15px" id="d-nw-total">—</span></div>
-    <div class="row"><span style="font-size:13px;color:var(--sub)">Excl. Property</span><span style="font-weight:700" id="d-nw-noprop">—</span></div>
-    <div class="row" style="border-bottom:none"><span style="font-size:13px;color:var(--sub)">Excl. Property & CPF</span><span style="font-weight:700" id="d-nw-liquid">—</span></div>
+    <div class="row"><span style="font-size:13px;color:var(--sub)">Total Net Worth</span><span style="font-weight:700;font-size:14px" id="d-nw-total">—</span></div>
+    <div class="row"><span style="font-size:13px;color:var(--sub)">Excl. Property</span><span style="font-weight:700;font-size:14px" id="d-nw-noprop">—</span></div>
+    <div class="row" style="border-bottom:none"><span style="font-size:13px;color:var(--sub)">Excl. Property & CPF</span><span style="font-weight:700;font-size:14px" id="d-nw-liquid">—</span></div>
   </div>
   <div class="g2" style="margin-top:0">
     <div class="mc"><div class="lbl">Liquid Assets</div><div class="lg" id="d-liquid" style="color:var(--blue)">—</div><div style="font-size:10px;color:var(--sub);margin-top:4px">Cash · Investments · SRS</div></div>
@@ -524,7 +524,7 @@ const DA=[
   {id:'cc4',name:'Credit Card 4',type:'liability',category:'Credit Cards',sub:'credit',ccy:'SGD'},
 ];
 const DR={age:35,retireAge:55,lifeExp:85,returnPct:5,savingsReturnPct:2.5,savingsPostReturnPct:2.5,expenses:4000,inflation:2.5,savings:2500,cpfPayout:1200,expensesPre:0,incomePre:0,incomePost:0,savingsPost:0};
-const DG=[{id:'goal-retire',name:'Retirement Nest Egg',target:2000000,ccy:'SGD'},{id:'goal-emergency',name:'Emergency Fund',target:24000,ccy:'SGD'}];
+const DG=[{id:'goal-retire',name:'Retirement Nest Egg',target:1000000,ccy:'SGD'},{id:'goal-emergency',name:'Emergency Fund',target:18000,ccy:'SGD'}];
 const DFX={USD:1.28,EUR:1.46,GBP:1.71,AUD:0.88,JPY:0.009,HKD:0.16,MYR:0.30,CNY:0.187};
 
 // ── Account migration — only ADDS new default accounts, never renames existing ones ──
@@ -963,7 +963,7 @@ function renderDash(){
   if(D.months.length>=3){
     const _smg=sortedMonths();const all=_smg.map(m=>calcNW(m.values).net),first=all[0],last=all[all.length-1],mos=_smg.length-1,monthly=(last-first)/mos;
     const tgts=[500000,1000000,2000000,5000000].filter(t=>t>last);
-    let gh=`<div class="row"><span style="font-size:13px;color:var(--sub)">Avg monthly growth</span><span style="font-weight:700;font-size:13px" class="${monthly>=0?'pos':'neg'}">${fD(monthly)}</span></div><div class="row"><span style="font-size:13px;color:var(--sub)">Total growth (${mos} mo)</span><span style="font-weight:700;font-size:13px" class="${(last-first)>=0?'pos':'neg'}">${fD(last-first)}</span></div>`;
+    const yoy=mos>=12?(last-_smg[_smg.length-13].net)/(Math.abs(_smg[_smg.length-13].net)||1)*100:null;let gh=`<div class="row"><span style="font-size:13px;color:var(--sub)">Avg monthly NW change</span><span style="font-weight:700;font-size:13px" class="${monthly>=0?'pos':'neg'}">${fD(monthly)}/mo</span></div><div class="row"><span style="font-size:13px;color:var(--sub)">Total NW change since ${_smg[0].label}</span><span style="font-weight:700;font-size:13px" class="${(last-first)>=0?'pos':'neg'}">${fD(last-first)} (${((last-first)/(Math.abs(first)||1)*100).toFixed(1)}%)</span></div>${yoy!==null?`<div class="row"><span style="font-size:13px;color:var(--sub)">Year-on-year change</span><span style="font-weight:700;font-size:13px" class="${yoy>=0?'pos':'neg'}">${yoy>=0?'+':''}${yoy.toFixed(1)}%</span></div>`:''}`;
     const byY={};D.months.forEach(m=>{const yr=m.label.split(' ').pop();byY[yr]=calcNW(m.values).net;});
     const yrs=Object.keys(byY).sort();
     if(yrs.length>=2){gh+=`<div style="padding:6px 0 2px;font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.08em;color:var(--sub)">Year-on-Year</div>`;for(let i=1;i<yrs.length;i++){const yoy=byY[yrs[i]]-byY[yrs[i-1]];const pct=byY[yrs[i-1]]?((yoy/Math.abs(byY[yrs[i-1]]))*100).toFixed(1):'—';gh+=`<div class="row"><span style="font-size:13px;color:var(--sub)">${yrs[i-1]} → ${yrs[i]}</span><span style="font-weight:700;font-size:13px" class="${yoy>=0?'pos':'neg'}">${fD(yoy)} <span style="font-weight:400;font-size:11px;color:var(--sub)">(${pct}%)</span></span></div>`;}}
@@ -1378,11 +1378,11 @@ function calcDecum(){try{
   while(portfolio>0&&simMonths<maxMonths){
     const yr=simMonths/12;
     const currentAge=rAge+yr;
-    // Apply reduced expenses after 65
+    // Expenses already in retirement-age terms — inflation only applies during drawdown
     const baseExp=currentAge>=65?exp65:exp;
-    const infExp=baseExp*Math.pow(1+inf,yr);
+    const infExp2=baseExp*Math.pow(1+inf,yr);
     const cpfM=currentAge>=65?cpf:0;
-    const draw=Math.max(infExp-inc-cpfM,0);
+    const draw=Math.max(infExp2-inc-cpfM,0);
     portfolio=portfolio*(1+mr)-draw;
     simMonths++;
   }
@@ -1452,6 +1452,9 @@ function loadRetire(){
     savInput._manualEdit=false;
     if(r.savings) savInput.value=r.savings;
   }
+  // Restore toggles
+  if(typeof r.exp65Reduce!=='undefined') setExp65(r.exp65Reduce);
+  if(typeof r.propInPortfolio!=='undefined') setPropInPortfolio(r.propInPortfolio);
   calcRetire();
 }
 function calcRetire(){try{
@@ -1490,7 +1493,8 @@ function calcRetire(){try{
   D.retire={age,retireAge:rAge,lifeExp:life,returnPct:Math.round(ret*10000)/100,savingsReturnPct:Math.round(savRtn*10000)/100,
     savingsPostReturnPct:Math.round(savPostRtn*10000)/100,
     inflation:inf*100,savings:sav,cpfPayout:cpf,expenses:expPost,expensesPre:expPre,
-    incomePre:incPre,incomePost:incPost,savingsPost:savPost};
+    incomePre:incPre,incomePost:incPost,savingsPost:savPost,
+    exp65Reduce:_exp65Reduce,propInPortfolio:_propInPortfolio};
   saveState();
 
   const curNWFull=latest()?calcNW(latest().values).net:0;
@@ -1513,9 +1517,9 @@ function calcRetire(){try{
   const savingsGrowth=msr>0?ems*(Math.pow(1+msr,months)-1)/msr:ems*months;
   let futNW=portfolioGrowth+savingsGrowth;
 
-  // Two-phase expenses: retire→65 uses expPost, 65+ uses expPost65
-  const infExp=expPost*Math.pow(1+inf,ytr);       // retire→65 expenses (inflation adj.)
-  const infExp65=expPost65*Math.pow(1+inf,ytr);   // 65+ expenses (inflation adj.)
+  // User inputs expenses at retirement age directly — no inflation adjustment needed
+  const infExp=expPost;
+  const infExp65=expPost65;
   const cpfM=rAge>=65?cpf:0;
   const nd=Math.max(infExp-incPost-cpfM-savPost,0);
 
@@ -1539,6 +1543,8 @@ function calcRetire(){try{
   const surplus=futNW-req;
   const pct=Math.min(req>0?futNW/req*100:100,150);
   const ok=surplus>=0,close=pct>=80;
+  // Save req for goals card
+  D.retire._reqNest=Math.round(req);
 
   // Earliest age scan — consistent with main calculation
   let earliest=null;
@@ -1547,19 +1553,19 @@ function calcRetire(){try{
     const pg2=curNW*Math.pow(1+mr,mon2);
     const sg2=msr>0?ems*(Math.pow(1+msr,mon2)-1)/msr:ems*mon2;
     const p2=pg2+sg2;
-    const ie=expPost*Math.pow(1+inf,ta-age);
+    const ie=expPost;  // user input is already at retirement-age value
     const cpfA=ta>=65?cpf:0;
     const ry=Math.max(life-ta,0);
     let r2;
     if(ta<65&&ry>0){
       const y1b=Math.min(65-ta,ry),y2b=Math.max(ry-y1b,0);
       const d1b=Math.max(ie-incPost-savPost,0);
-      const d2b=Math.max(expPost65*Math.pow(1+inf,ta-age)-incPost-cpf-savPost,0);
+      const d2b=Math.max(expPost65-incPost-cpf-savPost,0);
       const pv1b=mrr<=0?d1b*y1b*12:d1b*(1-Math.pow(1+mrr,-y1b*12))/mrr;
       const pv2b=mrr<=0?d2b*y2b*12:d2b*(1-Math.pow(1+mrr,-y2b*12))/mrr;
       r2=pv1b+(y2b>0?pv2b/Math.pow(1+rr,y1b):0);
     } else {
-      const draw=Math.max(expPost65*Math.pow(1+inf,ta-age)-incPost-cpfA-savPost,0);
+      const draw=Math.max(expPost65-incPost-cpfA-savPost,0);
       r2=mrr<=0?draw*ry*12:draw*(1-Math.pow(1+mrr,-ry*12))/mrr;
     }
     if(p2>=r2){earliest=ta;break;}
@@ -1608,7 +1614,7 @@ function calcRetire(){try{
 
   <div class="divr"></div>
   <div style="font-size:10px;font-weight:800;text-transform:uppercase;letter-spacing:.08em;color:var(--green);margin-bottom:6px">After Retirement</div>
-  <div class="row"><span style="font-size:13px;color:var(--sub)">Monthly expenses at ${rAge} <span style="font-weight:400;color:var(--muted);font-size:11px">(input ${fS(expPost,true)} × ${(inf*100).toFixed(1)}%/yr × ${ytr}yrs inflation)</span></span><span style="font-weight:700">${fS(infExp,true)}/mo</span></div>
+  <div class="row"><span style="font-size:13px;color:var(--sub)">Monthly expenses at ${rAge}</span><span style="font-weight:700">${fS(infExp,true)}/mo</span></div>
   ${_reduceExp65?`<div class="row"><span style="font-size:13px;color:var(--sub)">Monthly expenses after 65 (−15%)</span><span style="font-weight:700;color:var(--green)">${fS(infExp65,true)}/mo</span></div>`:''}
   ${savPost>0?`<div class="row"><span style="font-size:13px;color:var(--sub)">Reinvested savings (${parseFloat((savPostRtn*100).toFixed(2))}%/yr)</span><span style="font-weight:700;color:var(--blue)">−${fS(savPost,true)}/mo</span></div>`:''}
   ${incPost>0?`<div class="row"><span style="font-size:13px;color:var(--sub)">Other income</span><span style="font-weight:700;color:var(--green)">−${fS(incPost,true)}/mo</span></div>`:''}
@@ -1698,17 +1704,115 @@ function renderCommentary(){
 }
 function renderGoals(){
   if(!document.getElementById('goals-body'))return;
-  const lm=latest(),curSGD=lm?calcNW(lm.values).net:0;
+  const lm=latest();
+  // Retirement: exclude property (more realistic — property is not easily drawable)
+  const propIds=new Set(D.accounts.filter(a=>a.sub==='prop'||a.category==='Property').map(a=>a.id));
+  const mortIds=new Set(D.accounts.filter(a=>a.type==='liability'&&(a.category==='Mortgage'||a.name.toLowerCase().includes('home'))).map(a=>a.id));
+  const retireNW=lm?D.accounts.reduce((s,a)=>{
+    if(propIds.has(a.id)||mortIds.has(a.id))return s;
+    const v=toSGD(lm.values[a.id]||0,a.ccy);
+    return s+(a.type==='asset'?v:-v);
+  },0):0;
+  // Cash for emergency fund
   const cashT=lm?D.accounts.filter(a=>a.type==='asset'&&(a.sub==='bank'||a.category==='Cash & Bank')).reduce((s,a)=>s+toSGD(lm.values[a.id]||0,a.ccy),0):0;
-  const cfg={'goal-retire':{icon:'🎯',desc:'Target nest egg for retirement',current:curSGD,color:'var(--blue)',hint:'Measured against total net worth'},'goal-emergency':{icon:'🛡️',desc:'3–6 months expenses in liquid cash',current:cashT,color:'var(--green)',hint:'Measured against Cash & Bank accounts'}};
+  // Required nest egg from calcRetire if available
+  const reqNest=D.retire&&D.retire._reqNest?D.retire._reqNest:null;
+
+  const cfg={
+    'goal-retire':{icon:'🎯',current:retireNW,color:'var(--blue)',hint:'Excl. property — investable assets only'},
+    'goal-emergency':{icon:'🛡️',current:cashT,color:'var(--green)',hint:'Cash & Bank accounts'}
+  };
   let html='';
-  D.goals.forEach(g=>{const c=cfg[g.id];if(!c)return;const tS=toSGD(g.target,g.ccy||'SGD'),pct=Math.min(c.current/tS*100,100),rem=Math.max(tS-c.current,0),done=pct>=100,col=done?'var(--green)':pct>=70?'var(--gold)':'var(--red)';
-  html+=`<div style="margin-bottom:20px;padding-bottom:20px;border-bottom:1px solid var(--border)"><div style="display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:8px"><div><div style="font-size:15px;font-weight:700">${c.icon} ${escH(g.name)}</div><div style="font-size:11px;color:var(--sub);margin-top:2px">${c.desc}</div></div><button class="bsm" style="padding:4px 10px;font-size:11px;flex-shrink:0;margin-left:8px" onclick="editGoalTarget('${g.id}')">✏ Target</button></div><div style="display:flex;justify-content:space-between;font-size:13px;margin-bottom:5px"><span style="color:var(--sub)">Current</span><span style="font-weight:700">${fS(c.current,true)}</span></div><div style="display:flex;justify-content:space-between;font-size:13px;margin-bottom:8px"><span style="color:var(--sub)">Target</span><span style="font-weight:700">${fC(g.target,g.ccy||'SGD',true)}</span></div><div style="display:flex;justify-content:space-between;font-size:12px;margin-bottom:5px"><span style="color:${col};font-weight:700">${pct.toFixed(0)}% funded</span><span style="color:var(--sub)">${done?'✓ Goal reached!':fS(rem,true)+' to go'}</span></div><div class="bar-t" style="height:8px;border-radius:6px"><div class="bar-f" style="width:${pct}%;background:${done?'var(--green)':c.color};height:8px;border-radius:6px"></div></div><div style="font-size:10px;color:var(--muted);margin-top:4px">${c.hint}</div></div>`;});
+  D.goals.forEach(g=>{
+    const c=cfg[g.id];if(!c)return;
+    const tS=toSGD(g.target,g.ccy||'SGD');
+    const pct=Math.min(c.current/tS*100,100);
+    const rem=Math.max(tS-c.current,0);
+    const done=pct>=100;
+    const col=done?'var(--green)':pct>=70?'var(--gold)':'var(--red)';
+
+    if(g.id==='goal-retire'){
+      // Three-marker bar: current | required | target
+      const reqPct=reqNest?Math.min(reqNest/tS*100,100):null;
+      const curPct=pct;
+      html+=`<div style="margin-bottom:20px;padding-bottom:20px;border-bottom:1px solid var(--border)">
+        <div style="display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:8px">
+          <div><div style="font-size:15px;font-weight:700">${c.icon} ${escH(g.name)}</div><div style="font-size:11px;color:var(--sub);margin-top:2px">${c.hint}</div></div>
+          <button class="bsm" style="padding:4px 10px;font-size:11px;flex-shrink:0;margin-left:8px" onclick="editGoalTarget('${g.id}')">✏ Target</button>
+        </div>
+        <div style="display:flex;justify-content:space-between;font-size:13px;margin-bottom:3px"><span style="color:var(--sub)">Current (excl. property)</span><span style="font-weight:700">${fS(c.current,true)}</span></div>
+        ${reqNest?`<div style="display:flex;justify-content:space-between;font-size:13px;margin-bottom:3px"><span style="color:var(--sub)">Required nest egg</span><span style="font-weight:700;color:var(--gold)">${fS(reqNest,true)}</span></div>`:''}
+        <div style="display:flex;justify-content:space-between;font-size:13px;margin-bottom:8px"><span style="color:var(--sub)">Your target</span><span style="font-weight:700">${fC(g.target,g.ccy||'SGD',true)}</span></div>
+        <div style="position:relative;height:10px;background:var(--border2);border-radius:6px;margin-bottom:4px">
+          <div style="height:10px;width:${curPct}%;background:${col};border-radius:6px;transition:width .4s"></div>
+          ${reqNest&&reqPct?`<div style="position:absolute;top:-3px;left:${Math.min(reqPct,98)}%;width:2px;height:16px;background:var(--gold);border-radius:2px" title="Required nest egg"></div>`:''}
+        </div>
+        <div style="display:flex;justify-content:space-between;font-size:12px;margin-top:3px">
+          <span style="color:${col};font-weight:700">${pct.toFixed(0)}% of target</span>
+          <span style="color:var(--sub)">${done?'✓ Goal reached!':fS(rem,true)+' to go'}</span>
+        </div>
+        ${reqNest?`<div style="font-size:10px;color:var(--muted);margin-top:3px">▏ Gold marker = required nest egg from Retire tab</div>`:''}
+      </div>`;
+    } else {
+      // Emergency fund
+      html+=`<div style="margin-bottom:20px;padding-bottom:20px;border-bottom:1px solid var(--border)">
+        <div style="display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:8px">
+          <div><div style="font-size:15px;font-weight:700">${c.icon} ${escH(g.name)}</div><div style="font-size:11px;color:var(--sub);margin-top:2px">${c.hint}</div></div>
+          <button class="bsm" style="padding:4px 10px;font-size:11px;flex-shrink:0;margin-left:8px" onclick="editGoalTarget('${g.id}')">✏ Target</button>
+        </div>
+        <div style="display:flex;justify-content:space-between;font-size:13px;margin-bottom:3px"><span style="color:var(--sub)">Current cash</span><span style="font-weight:700">${fS(c.current,true)}</span></div>
+        <div style="display:flex;justify-content:space-between;font-size:13px;margin-bottom:8px"><span style="color:var(--sub)">Target</span><span style="font-weight:700">${fC(g.target,g.ccy||'SGD',true)}</span></div>
+        <div class="bar-t" style="height:8px;border-radius:6px"><div class="bar-f" style="width:${pct}%;background:${done?'var(--green)':c.color};height:8px;border-radius:6px"></div></div>
+        <div style="display:flex;justify-content:space-between;font-size:12px;margin-top:5px">
+          <span style="color:${col};font-weight:700">${pct.toFixed(0)}% funded</span>
+          <span style="color:var(--sub)">${done?'✓ Goal reached!':fS(rem,true)+' to go'}</span>
+        </div>
+      </div>`;
+    }
+  });
   const el=document.getElementById('goals-body');if(el)el.innerHTML=html;
 }
-function editGoalTarget(id){const g=D.goals.find(x=>x.id===id);if(!g)return;const ccys=['SGD','USD','EUR','GBP','AUD'].map(c=>`<option>${c}</option>`).join('');openModal(`<div style="font-family:'DM Sans',sans-serif;font-size:17px;font-weight:800;margin-bottom:4px">${id==='goal-retire'?'🎯':'🛡️'} ${escH(g.name)}</div><div style="font-size:12px;color:var(--sub);margin-bottom:16px">${id==='goal-retire'?'Retirement nest egg target':'Emergency buffer (3–6 months expenses)'}</div><div style="display:grid;grid-template-columns:1fr auto;gap:8px;align-items:end"><div><div class="lbl">Target Amount</div><input class="inp" id="et-amt" type="number" inputmode="decimal"/></div><div><div class="lbl">CCY</div><select class="inp" id="et-ccy" style="padding:11px 10px">${ccys}</select></div></div>`,
-'Save Target',()=>{const amt=parseFloat(document.getElementById('et-amt').value)||0,ccy=document.getElementById('et-ccy').value;if(!amt){showToast('Enter a target amount');return;}D.goals=D.goals.map(x=>x.id===id?{...x,target:amt,ccy}:x);saveState();closeModal();renderGoals();showToast('Target updated ✓');});
-setTimeout(()=>{const a=document.getElementById('et-amt');if(a){a.value=g.target;a.focus();a.select();}const c=document.getElementById('et-ccy');if(c)c.value=g.ccy||'SGD';},40);}
+
+function editGoalTarget(id){
+  const g=D.goals.find(x=>x.id===id);if(!g)return;
+  const isRetire=id==='goal-retire';
+  const isEmerg=id==='goal-emergency';
+
+  // Milestone picker for retirement
+  const retireMilestones=[300000,500000,750000,1000000,1500000,2000000,3000000,5000000];
+  const milestoneHTML=isRetire?`<div style="margin-bottom:12px"><div class="lbl">Quick milestones</div><div style="display:flex;flex-wrap:wrap;gap:6px">${retireMilestones.map(m=>`<button class="bsm" style="font-size:11px;padding:4px 8px" onclick="document.getElementById('et-amt').value=${m};this.parentElement.querySelectorAll('button').forEach(b=>b.style.background='');this.style.background='var(--blue-dim)'">${m>=1000000?'S$'+(m/1000000)+'M':'S$'+(m/1000)+'k'}</button>`).join('')}</div></div>`:'';
+
+  // Month picker for emergency fund — always shown with inline expense input
+  const storedExp=parseFloat(document.getElementById('r-exp-pre')&&document.getElementById('r-exp-pre').value)||0;
+  const emergMonthHTML=isEmerg?`
+    <div style="margin-bottom:12px">
+      <div class="lbl">Your monthly expenses</div>
+      <input class="inp" id="emg-exp" type="number" inputmode="decimal" placeholder="e.g. 5000" value="${storedExp||''}" oninput="(function(){const exp=parseFloat(document.getElementById('emg-exp').value)||0;[3,6,9,12].forEach(m=>{const b=document.getElementById('emg-btn-'+m);if(b){b.textContent=m+'mo'+(exp?(' = S$'+(exp*m).toLocaleString()):'');}});})()"/>
+    </div>
+    <div style="margin-bottom:12px">
+      <div class="lbl">Tap buffer to auto-fill target</div>
+      <div style="display:flex;flex-direction:column;gap:6px">${[3,6,9,12].map(m=>`<button id="emg-btn-${m}" class="bsm" style="font-size:12px;text-align:left;padding:8px 12px" onclick="(function(){const exp=parseFloat(document.getElementById('emg-exp').value)||0;if(!exp){showToast('Enter monthly expenses first');return;}document.getElementById('et-amt').value=exp*${m};document.querySelectorAll('[id^=emg-btn-]').forEach(b=>b.style.background='');this.style.background='var(--green-dim)';})()">${m}mo</button>`).join('')}</div>
+    </div>`:'';
+
+  const ccys=['SGD','USD','EUR','GBP','AUD'].map(c=>`<option>${c}</option>`).join('');
+  openModal(`
+    <div style="font-family:'DM Sans',sans-serif;font-size:17px;font-weight:800;margin-bottom:4px">${isRetire?'🎯':'🛡️'} ${escH(g.name)}</div>
+    <div style="font-size:12px;color:var(--sub);margin-bottom:16px">${isRetire?'Set your retirement nest egg target':'Set your emergency fund target'}</div>
+    ${milestoneHTML}${emergMonthHTML}
+    <div style="margin-bottom:4px"><div class="lbl">Target Amount</div><input class="inp" id="et-amt" type="number" inputmode="decimal" style="margin-bottom:8px"/>
+    <div class="lbl">Currency</div><select class="inp" id="et-ccy">${ccys}</select></div>`,
+    'Save Target',()=>{
+      const amt=parseFloat(document.getElementById('et-amt').value)||0;
+      const ccy=document.getElementById('et-ccy').value;
+      if(!amt){showToast('Enter a target amount');return;}
+      D.goals=D.goals.map(x=>x.id===id?{...x,target:amt,ccy}:x);
+      saveState();closeModal();renderGoals();showToast('Target updated ✓');
+    });
+  setTimeout(()=>{
+    const a=document.getElementById('et-amt');if(a){a.value=g.target;a.focus();a.select();}
+    const c=document.getElementById('et-ccy');if(c)c.value=g.ccy||'SGD';
+  },40);
+}
 
 // ── HISTORY ──
 let _historySelectMode=false,_historySelected=new Set();
