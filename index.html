@@ -283,10 +283,10 @@ select.inp{appearance:none;-webkit-appearance:none;background-image:url("data:im
     <div class="lbl" style="margin-bottom:10px;color:var(--blue)">Before Retirement</div>
     <div style="display:grid;grid-template-columns:1fr 1fr;gap:9px;margin-bottom:9px">
       <div style="display:flex;flex-direction:column"><div class="lbl tip-wrap">Take-Home Income/mo<span class="tip-icon" tabindex="0">?</span><div class="tip-box"><b>Use your total monthly income including CPF contributions.</b><br/><br/>CPF contributions count — they go toward your retirement, just in a separate bucket.<br/><br/><b>Formula:</b><br/>Monthly income = Annual gross ÷ 12<br/><br/><b>Example:</b><br/>Base salary S$11,910/mo × 15 months (inc. 3 months bonus) = S$178,650/yr<br/>S$178,650 ÷ 12 = <b>S$14,888/mo</b><br/><br/>This gives a more accurate picture of how much is building toward your retirement each month.</div></div><input class="inp" id="r-inc-pre" type="number" inputmode="decimal" placeholder="8000" style="margin-top:auto" oninput="calcRetire()"/></div>
-      <div style="display:flex;flex-direction:column"><div class="lbl tip-wrap">Monthly Surplus Invested<span class="tip-icon" tabindex="0">?</span><div class="tip-box"><b>All surplus income that goes toward building your nest egg.</b><br/><br/>This includes everything not spent — cash savings, investments, CPF voluntary top-ups, SSBs, etc.<br/><br/><b>Auto-calculated</b> as Income − Expenses when both are filled.<br/>Override by typing your own value.</div></div><input class="inp" id="r-sav" type="number" inputmode="decimal" placeholder="" style="margin-top:auto" oninput="this._manualEdit=true;this.style.background='var(--s1)';calcRetire()"/></div>
+      <div style="display:flex;flex-direction:column"><div class="lbl tip-wrap">Monthly Surplus Invested<span class="tip-icon" tabindex="0">?</span><div class="tip-box"><b>Cash surplus you invest each month.</b><br/><br/><b>Auto-calculated</b> as Income − Expenses when both are filled.<br/><br/>To override manually — for example to deduct mortgage principal repayment which goes toward loan reduction, not investment:<br/><br/>Income − Expenses − Mortgage principal = investable surplus<br/><br/>Your manual value is saved and will persist. Tap the field and clear it to reset to auto.</div></div><input class="inp" id="r-sav" type="number" inputmode="decimal" placeholder="" style="margin-top:auto" oninput="this._manualEdit=true;this.style.background='var(--s1)';calcRetire()"/><div id="r-sav-hint" style="display:none;font-size:10px;color:var(--blue);margin-top:3px;cursor:pointer" onclick="resetSavingsAuto()">↺ Clear to reset to auto</div></div>
     </div>
     <div style="display:grid;grid-template-columns:1fr 1fr;gap:9px">
-      <div style="display:flex;flex-direction:column"><div class="lbl">Monthly Expenses</div><input class="inp" id="r-exp-pre" type="number" inputmode="decimal" placeholder="4000" style="margin-top:auto" oninput="calcRetire()"/></div>
+      <div style="display:flex;flex-direction:column"><div class="lbl tip-wrap">Monthly Expenses<span class="tip-icon" tabindex="0">?</span><div class="tip-box"><b>Your total monthly expenses at retirement age.</b><br/><br/>If your mortgage is still ongoing at retirement:<br/>• Include the <b>interest portion only</b><br/>• Exclude the principal repayment — it reduces your loan balance, not a true expense<br/><br/><b>Example:</b> Monthly instalment S$3,500 (S$1,200 interest + S$2,300 principal)<br/>→ Include only S$1,200 as expense</div></div><input class="inp" id="r-exp-pre" type="number" inputmode="decimal" placeholder="4000" style="margin-top:auto" oninput="calcRetire()"/></div>
       <div style="display:flex;flex-direction:column"><div class="lbl tip-wrap">Return on Surplus %/yr<span class="tip-icon" tabindex="0">?</span><div class="tip-box"><b>Conservative return on your monthly surplus.</b><br/><br/>Your existing portfolio compounds at the Portfolio Return rate above.<br/><br/>Your <b>new monthly savings</b> may earn less — they often sit in cash, CPF OA (2.5%) or SSBs (3%) before being deployed.<br/><br/>Recommended: <b>2–3%</b>. Default: <b>2.5%</b>.</div></div><input class="inp" id="r-sav-rtn" type="number" inputmode="decimal" placeholder="2.5" style="margin-top:auto" oninput="calcRetire()"/></div>
     </div>
   </div>
@@ -1417,6 +1417,14 @@ function calcDecum(){try{
     :`<div class="row" style="border-bottom:none"><span style="font-size:13px;color:var(--sub)">Portfolio lasts beyond</span><span style="font-weight:800;font-size:15px;color:var(--green)">age 100 ✓</span></div>`}
   </div>`;
 }catch(err){console.error('calcDecum error:',err);}}
+function resetSavingsAuto(){
+  const si=document.getElementById('r-sav');
+  const hint=document.getElementById('r-sav-hint');
+  if(si){si._manualEdit=false;si.value='';si.style.background='';}
+  if(hint)hint.style.display='none';
+  calcRetire();
+}
+
 let _exp65Reduce=false;
 let _propInPortfolio=false;
 
@@ -1449,8 +1457,21 @@ function loadRetire(){
   Object.entries(map).forEach(([id,val])=>{const el=document.getElementById(id);if(el&&val)el.value=val;});
   const savInput=document.getElementById('r-sav');
   if(savInput){
-    savInput._manualEdit=false;
-    if(r.savings) savInput.value=r.savings;
+    if(r.savingsManual){
+      // User had manually set this — restore their value and keep manual mode
+      savInput._manualEdit=true;
+      savInput.value=r.savingsManualValue||r.savings||'';
+      savInput.style.background='var(--s1)';
+      const hint=document.getElementById('r-sav-hint');
+      if(hint)hint.style.display='block';
+    } else {
+      // Auto-compute mode — clear so calcRetire recomputes
+      savInput._manualEdit=false;
+      savInput.value='';
+      savInput.style.background='';
+      const hint=document.getElementById('r-sav-hint');
+      if(hint)hint.style.display='none';
+    }
   }
   // Restore toggles
   if(typeof r.exp65Reduce!=='undefined') setExp65(r.exp65Reduce);
@@ -1476,6 +1497,7 @@ function calcRetire(){try{
 
   // Auto-compute monthly surplus — requires income > 0, expenses can be zero
   const savInput=document.getElementById('r-sav');
+  const savHint=document.getElementById('r-sav-hint');
   let sav=parseFloat(document.getElementById('r-sav').value)||0;
   if(savInput && !savInput._manualEdit){
     if(incPre>0){
@@ -1483,18 +1505,20 @@ function calcRetire(){try{
       savInput.value=sav||'';
       savInput.style.background='var(--green-dim)';
     } else {
-      // Income cleared — clear auto-computed savings too
-      sav=0;
-      savInput.value='';
-      savInput.style.background='';
+      sav=0;savInput.value='';savInput.style.background='';
     }
+    if(savHint)savHint.style.display='none';
+  } else if(savInput&&savInput._manualEdit){
+    if(savHint)savHint.style.display='block';
   }
 
   D.retire={age,retireAge:rAge,lifeExp:life,returnPct:Math.round(ret*10000)/100,savingsReturnPct:Math.round(savRtn*10000)/100,
     savingsPostReturnPct:Math.round(savPostRtn*10000)/100,
     inflation:inf*100,savings:sav,cpfPayout:cpf,expenses:expPost,expensesPre:expPre,
     incomePre:incPre,incomePost:incPost,savingsPost:savPost,
-    exp65Reduce:_exp65Reduce,propInPortfolio:_propInPortfolio};
+    exp65Reduce:_exp65Reduce,propInPortfolio:_propInPortfolio,
+    savingsManual:!!(document.getElementById('r-sav')&&document.getElementById('r-sav')._manualEdit),
+    savingsManualValue:sav};
   saveState();
 
   const curNWFull=latest()?calcNW(latest().values).net:0;
