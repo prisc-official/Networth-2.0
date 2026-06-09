@@ -1076,7 +1076,15 @@ function openNewMonth(){
     const now=new Date(),MONTHS=['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
     const ms=document.getElementById('e-month-sel');if(ms)ms.value=MONTHS[now.getMonth()];
     populateYearSelect(now.getFullYear());
-    initEntryFX(null);buildEntry({});
+    initEntryFX(null);
+    // Pre-populate with latest month values so user only updates what changed
+    const lm=latest();
+    const seedVals=lm?{...lm.values}:{};
+    buildEntry(seedVals);
+    if(lm){
+      // Show a subtle hint that values are pre-filled
+      showToast('Values pre-filled from '+lm.label+' — update what changed');
+    }
   }
   showView('v-entry');
 }
@@ -1607,7 +1615,7 @@ function calcRetire(){try{
     <div style="font-size:13px;color:${vcol}">${ok?'Keep building.':close?'Small changes can close the gap.':'Consider increasing savings or adjusting timeline.'}</div>
   </div>
 
-  <div class="row"><span style="font-size:13px;color:var(--sub)">Required nest egg</span><span style="font-weight:700;color:var(--gold)">${fS(req,true)}</span></div>
+  <div class="row" style="position:relative"><span style="font-size:13px;color:var(--sub)">Required nest egg <span onclick="const t=document.getElementById('req-tip');t.style.display=t.style.display==='none'?'block':'none'" style="display:inline-block;width:16px;height:16px;border-radius:50%;background:var(--border2);font-size:10px;text-align:center;line-height:16px;cursor:pointer;font-weight:700;color:var(--sub)">?</span></span><span style="font-weight:700;color:var(--gold)">${fS(req,true)}</span><div id="req-tip" style="display:none;position:absolute;top:28px;left:0;right:0;z-index:50;background:var(--s1);border:1px solid var(--border2);border-radius:12px;padding:12px 14px;font-size:12px;color:var(--sub);line-height:1.7;box-shadow:0 4px 16px rgba(0,0,0,.12)"><b style="color:var(--text)">What is the required nest egg?</b><br/><br/>The estimated portfolio you need at retirement to cover your expenses for the rest of your life — without running out of money.<br/><br/>It factors in your monthly expenses, investment returns, inflation, CPF Life payout from 65, and any other income.<br/><br/>Think of it as your personal retirement price tag. <span onclick="document.getElementById('req-tip').style.display='none'" style="color:var(--blue);cursor:pointer;font-weight:700">Close</span></div></div>
   <div class="row"><span style="font-size:13px;color:var(--sub)">Projected at retirement (age ${rAge})</span><span style="font-weight:700;color:var(--blue)">${fS(futNW,true)}</span></div>
   <div class="row"><span style="font-size:13px;color:var(--sub)">Surplus / (Shortfall)</span><span class="${surplus>=0?'pos':'neg'}" style="font-weight:700">${fS(surplus,true)}</span></div>
   <div style="margin-top:10px;margin-bottom:14px">
