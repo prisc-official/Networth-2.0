@@ -282,12 +282,17 @@ select.inp{appearance:none;-webkit-appearance:none;background-image:url("data:im
   <div class="card" style="border-left:3px solid var(--blue)">
     <div class="lbl" style="margin-bottom:10px;color:var(--blue)">Before Retirement</div>
     <div style="display:grid;grid-template-columns:1fr 1fr;gap:9px;margin-bottom:9px">
-      <div style="display:flex;flex-direction:column"><div class="lbl tip-wrap">Take-Home Income/mo<span class="tip-icon" tabindex="0">?</span><div class="tip-box"><b>Use your total monthly income including CPF contributions.</b><br/><br/>CPF contributions count — they go toward your retirement, just in a separate bucket.<br/><br/><b>Formula:</b><br/>Monthly income = Annual gross ÷ 12<br/><br/><b>Example:</b><br/>Base salary S$11,910/mo × 15 months (inc. 3 months bonus) = S$178,650/yr<br/>S$178,650 ÷ 12 = <b>S$14,888/mo</b><br/><br/>This gives a more accurate picture of how much is building toward your retirement each month.</div></div><input class="inp" id="r-inc-pre" type="number" inputmode="decimal" placeholder="8000" style="margin-top:auto" oninput="calcRetire()"/></div>
-      <div style="display:flex;flex-direction:column"><div class="lbl tip-wrap">Monthly Surplus Invested<span class="tip-icon" tabindex="0">?</span><div class="tip-box"><b>Cash surplus you invest each month.</b><br/><br/><b>Auto-calculated</b> as Income − Expenses when both are filled.<br/><br/>To override manually — for example to deduct mortgage principal repayment which goes toward loan reduction, not investment:<br/><br/>Income − Expenses − Mortgage principal = investable surplus<br/><br/>Your manual value is saved and will persist. Tap the field and clear it to reset to auto.</div></div><input class="inp" id="r-sav" type="number" inputmode="decimal" placeholder="" style="margin-top:auto" oninput="this._manualEdit=true;this.style.background='var(--s1)';calcRetire()"/><div id="r-sav-hint" style="display:none;font-size:10px;color:var(--blue);margin-top:3px;cursor:pointer" onclick="resetSavingsAuto()">↺ Clear to reset to auto</div></div>
+      <div style="display:flex;flex-direction:column"><div class="lbl tip-wrap">Take-Home Income/mo<span class="tip-icon" tabindex="0">?</span><div class="tip-box"><b>Your gross monthly wage before any CPF deductions, and does not account for additional employer CPF contribution.</b><br/><br/><b>Include bonuses:</b> Annualise your total pay and divide by 12.<br/><br/>Example: Base S$11,910/mo × 12 months + S$35,730 bonus (3 months) = S$178,650/yr<br/>S$178,650 ÷ 12 = <b>S$14,888/mo</b></div></div><input class="inp" id="r-inc-pre" type="number" inputmode="decimal" placeholder="8000" style="margin-top:auto" oninput="calcRetire()"/></div>
+      <div style="display:flex;flex-direction:column"><div class="lbl tip-wrap">Monthly Living Expenses<span class="tip-icon" tabindex="0">?</span><div class="tip-box"><b>Day-to-day living costs excluding mortgage.</b><br/><br/>Include: food, transport, utilities, insurance, lifestyle, children's expenses.<br/><br/><b>Exclude mortgage</b> — enter your mortgage instalment separately below so the app can correctly split principal and interest.</div></div><input class="inp" id="r-exp-pre" type="number" inputmode="decimal" placeholder="4000" style="margin-top:auto" oninput="calcRetire()"/></div>
     </div>
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:9px;margin-bottom:9px">
+      <div style="display:flex;flex-direction:column"><div class="lbl tip-wrap">Mortgage Instalment/mo<span class="tip-icon" tabindex="0">?</span><div class="tip-box"><b>Your total monthly mortgage payment (principal + interest).</b><br/><br/>Check your bank statement or HDB payment schedule for the exact amount.</div></div><input class="inp" id="r-mortgage" type="number" inputmode="decimal" placeholder="0" style="margin-top:auto" oninput="calcRetire()"/></div>
+      <div style="display:flex;flex-direction:column"><div class="lbl tip-wrap">Mortgage Interest Rate %/yr<span class="tip-icon" tabindex="0">?</span><div class="tip-box"><b>Your current home loan interest rate.</b><br/><br/>Check your bank statement or loan agreement.<br/><br/>HDB loan: 2.6%/yr<br/>Bank loan: typically 3–4%/yr (floating)<br/><br/>Used to estimate the interest portion of your monthly instalment.</div></div><input class="inp" id="r-mortgage-rate" type="number" inputmode="decimal" placeholder="3" style="margin-top:auto" oninput="calcRetire()"/></div>
+    </div>
+    <div id="r-mortgage-split" style="display:none;padding:8px 12px;background:var(--s2);border-radius:10px;font-size:12px;color:var(--sub);line-height:1.8;margin-bottom:9px"></div>
     <div style="display:grid;grid-template-columns:1fr 1fr;gap:9px">
-      <div style="display:flex;flex-direction:column"><div class="lbl tip-wrap">Monthly Expenses<span class="tip-icon" tabindex="0">?</span><div class="tip-box"><b>Your total monthly expenses at retirement age.</b><br/><br/>If your mortgage is still ongoing at retirement:<br/>• Include the <b>interest portion only</b><br/>• Exclude the principal repayment — it reduces your loan balance, not a true expense<br/><br/><b>Example:</b> Monthly instalment S$3,500 (S$1,200 interest + S$2,300 principal)<br/>→ Include only S$1,200 as expense</div></div><input class="inp" id="r-exp-pre" type="number" inputmode="decimal" placeholder="4000" style="margin-top:auto" oninput="calcRetire()"/></div>
-      <div style="display:flex;flex-direction:column"><div class="lbl tip-wrap">Return on Surplus %/yr<span class="tip-icon" tabindex="0">?</span><div class="tip-box"><b>Conservative return on your monthly surplus.</b><br/><br/>Your existing portfolio compounds at the Portfolio Return rate above.<br/><br/>Your <b>new monthly savings</b> may earn less — they often sit in cash, CPF OA (2.5%) or SSBs (3%) before being deployed.<br/><br/>Recommended: <b>2–3%</b>. Default: <b>2.5%</b>.</div></div><input class="inp" id="r-sav-rtn" type="number" inputmode="decimal" placeholder="2.5" style="margin-top:auto" oninput="calcRetire()"/></div>
+      <div style="display:flex;flex-direction:column"><div class="lbl tip-wrap">Monthly Surplus Invested<span class="tip-icon" tabindex="0">?</span><div class="tip-box"><b>Auto-calculated as:</b><br/>Income − Living expenses − Mortgage interest<br/><br/>Principal repayment is excluded — it builds home equity, not investable savings.<br/><br/>Your manual value is saved and persists. Clear the field to reset to auto.</div></div><input class="inp" id="r-sav" type="number" inputmode="decimal" placeholder="" style="margin-top:auto" oninput="this._manualEdit=true;this.style.background='var(--s1)';calcRetire()"/><div id="r-sav-hint" style="display:none;font-size:10px;color:var(--blue);margin-top:3px;cursor:pointer" onclick="resetSavingsAuto()">↺ Clear to reset to auto</div></div>
+      <div style="display:flex;flex-direction:column"><div class="lbl tip-wrap">Return on Surplus %/yr<span class="tip-icon" tabindex="0">?</span><div class="tip-box"><b>Conservative return on your monthly surplus.</b><br/><br/>Recommended: <b>2–3%</b>.</div></div><input class="inp" id="r-sav-rtn" type="number" inputmode="decimal" placeholder="2.5" style="margin-top:auto" oninput="calcRetire()"/></div>
     </div>
   </div>
   <div class="card" style="border-left:3px solid var(--green)">
@@ -298,7 +303,7 @@ select.inp{appearance:none;-webkit-appearance:none;background-image:url("data:im
     </div>
     <div style="display:grid;grid-template-columns:1fr 1fr;gap:9px;margin-bottom:9px">
       <div style="display:flex;flex-direction:column"><div class="lbl tip-wrap">Other Income/mo<span class="tip-icon" tabindex="0">?</span><div class="tip-box"><b>Income you receive in retirement beyond CPF Life.</b><br/><br/>Examples:<br/>• Rental income<br/>• Part-time / freelance<br/>• Dividends paid out<br/>• Spouse's income<br/><br/>This offsets your expenses so you draw less from your portfolio.</div></div><input class="inp" id="r-inc-post" type="number" inputmode="decimal" placeholder="0" style="margin-top:auto" oninput="calcRetire()"/></div>
-      <div style="display:flex;flex-direction:column"><div class="lbl tip-wrap">CPF Life at 65/mo<span class="tip-icon" tabindex="0">?</span><div class="tip-box"><b>CPF LIFE</b> pays monthly income from age 65 for life.<br/><br/>Log in to <b>my.cpf.gov.sg</b> → My Retirement → CPF LIFE Estimator<br/><br/>Typical: <b>S$700–S$2,000/mo</b></div></div><input class="inp" id="r-cpf" type="number" inputmode="decimal" placeholder="0" style="margin-top:auto" oninput="calcRetire()"/></div>
+      <div style="display:flex;flex-direction:column"><div class="lbl tip-wrap">CPF Life at 65/mo<span class="tip-icon" tabindex="0">?</span><div class="tip-box"><b>CPF LIFE</b> pays monthly income from age 65 for life.<br/><br/>Estimated payouts (Standard Plan, 2026 cohort):<br/>• BRS (S$110,200): ~<b>S$950/mo</b><br/>• FRS (S$220,400): ~<b>S$1,780/mo</b><br/>• ERS (S$440,800): ~<b>S$3,440/mo</b><br/><br/>Default set to <b>S$1,700/mo</b> (approx. FRS payout).<br/>Check your actual estimate at <b>cpf.gov.sg/payoutestimator</b></div></div><input class="inp" id="r-cpf" type="number" inputmode="decimal" placeholder="1700" style="margin-top:auto" oninput="calcRetire()"/></div>
     </div>
     <div style="display:grid;grid-template-columns:1fr 1fr;gap:9px;margin-bottom:9px">
       <div style="display:flex;flex-direction:column"><div class="lbl tip-wrap">Return on Surplus %/yr<span class="tip-icon" tabindex="0">?</span><div class="tip-box"><b>Return on your reinvested savings after retirement.</b><br/><br/>Recommended: <b>2–3%</b> conservative.<br/>Set equal to Portfolio Return if fully reinvested in equities.</div></div><input class="inp" id="r-sav-post-rtn" type="number" inputmode="decimal" placeholder="2.5" style="margin-top:auto" oninput="calcRetire()"/></div>
@@ -523,7 +528,7 @@ const DA=[
   {id:'cc3',name:'Credit Card 3',type:'liability',category:'Credit Cards',sub:'credit',ccy:'SGD'},
   {id:'cc4',name:'Credit Card 4',type:'liability',category:'Credit Cards',sub:'credit',ccy:'SGD'},
 ];
-const DR={age:35,retireAge:55,lifeExp:85,returnPct:5,savingsReturnPct:2.5,savingsPostReturnPct:2.5,expenses:4000,inflation:2.5,savings:2500,cpfPayout:1200,expensesPre:0,incomePre:0,incomePost:0,savingsPost:0};
+const DR={age:35,retireAge:55,lifeExp:85,returnPct:5,savingsReturnPct:2.5,savingsPostReturnPct:2.5,expenses:4000,inflation:2.5,savings:2500,cpfPayout:1700,expensesPre:0,incomePre:0,incomePost:0,savingsPost:0};
 const DG=[{id:'goal-retire',name:'Retirement Nest Egg',target:1000000,ccy:'SGD'},{id:'goal-emergency',name:'Emergency Fund',target:18000,ccy:'SGD'}];
 const DFX={USD:1.28,EUR:1.46,GBP:1.71,AUD:0.88,JPY:0.009,HKD:0.16,MYR:0.30,CNY:0.187};
 
@@ -1459,6 +1464,8 @@ function loadRetire(){
   const map={'r-age':r.age,'r-ret':r.retireAge,'r-life':r.lifeExp,'r-rtn':r.returnPct,
     'r-sav-rtn':r.savingsReturnPct||2.5,
     'r-sav-post-rtn':r.savingsPostReturnPct||2.5,
+    'r-mortgage':r.mortgage||'',
+    'r-mortgage-rate':r.mortgageRate||3,
     'r-inf':r.inflation,'r-cpf':r.cpfPayout,'r-exp':r.expenses,
     'r-exp-pre':r.expensesPre||0,'r-inc-pre':r.incomePre||0,
     'r-inc-post':r.incomePost||0,'r-sav-post':r.savingsPost||0};
@@ -1503,13 +1510,33 @@ function calcRetire(){try{
   const incPost=parseFloat(document.getElementById('r-inc-post').value)||0;
   const savPost=parseFloat(document.getElementById('r-sav-post').value)||0;
 
+  const mortgage=parseFloat(document.getElementById('r-mortgage').value)||0;
+  const mortgageRate=(parseFloat(document.getElementById('r-mortgage-rate').value)||3)/100;
+  // Estimate interest portion: outstanding loan from Home Loan account
+  const lmvM=latest()?latest().values:{};
+  const outstandingLoan=D.accounts.filter(a=>a.type==='liability'&&(a.category==='Mortgage'||a.name.toLowerCase().includes('home loan')||a.name.toLowerCase().includes('home loan'))).reduce((s,a)=>s+toSGD(lmvM[a.id]||0,a.ccy),0);
+  // Monthly interest = outstanding loan × annual rate / 12
+  const mortgageInterest=outstandingLoan>0?Math.round(outstandingLoan*mortgageRate/12):Math.round(mortgage*(mortgageRate/(mortgageRate+1/30))); // fallback if no loan data
+  const mortgagePrincipal=Math.max(mortgage-mortgageInterest,0);
+  // Show split breakdown
+  const splitEl=document.getElementById('r-mortgage-split');
+  if(splitEl){
+    if(mortgage>0){
+      splitEl.style.display='block';
+      splitEl.innerHTML=`🏠 Mortgage split — Interest (expense): <b style="color:var(--red)">S$${mortgageInterest.toLocaleString()}/mo</b> · Principal (equity): <b style="color:var(--green)">S$${mortgagePrincipal.toLocaleString()}/mo</b>${outstandingLoan>0?'':' <span style="color:var(--muted)">(est. — update Home Loan balance in Add Month for accuracy)</span>'}`;
+    } else {
+      splitEl.style.display='none';
+    }
+  }
+
   // Auto-compute monthly surplus — requires income > 0, expenses can be zero
   const savInput=document.getElementById('r-sav');
   const savHint=document.getElementById('r-sav-hint');
   let sav=parseFloat(document.getElementById('r-sav').value)||0;
   if(savInput && !savInput._manualEdit){
     if(incPre>0){
-      sav=Math.max(incPre-(expPre||0),0);
+      // Surplus = Income − Living expenses − Mortgage interest only (principal goes to equity)
+      sav=Math.max(incPre-(expPre||0)-mortgageInterest,0);
       savInput.value=sav||'';
       savInput.style.background='var(--green-dim)';
     } else {
@@ -1526,7 +1553,8 @@ function calcRetire(){try{
     incomePre:incPre,incomePost:incPost,savingsPost:savPost,
     exp65Reduce:_exp65Reduce,propInPortfolio:_propInPortfolio,
     savingsManual:!!(document.getElementById('r-sav')&&document.getElementById('r-sav')._manualEdit),
-    savingsManualValue:sav};
+    savingsManualValue:sav,
+    mortgage,mortgageRate:mortgageRate*100};
   saveState();
 
   const curNWFull=latest()?calcNW(latest().values).net:0;
