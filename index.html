@@ -1347,7 +1347,10 @@ function calcDecum(){try{
   const inf    = (parseFloat(document.getElementById('r-inf').value)||2.5)/100;
   const cpf    = parseFloat(document.getElementById('r-cpf').value)||0;
   const exp    = parseFloat(document.getElementById('r-exp').value)||4000;
-  const exp65  = _exp65Reduce ? exp*0.85 : exp;  // reduced expenses after 65
+  const ytr    = Math.max(rAge-age,0);
+  // Inflate to retirement age — same as accumulation formula
+  const expInf = exp*Math.pow(1+inf,ytr);
+  const exp65  = _exp65Reduce ? expInf*0.85 : expInf;
   const inc    = parseFloat(document.getElementById('r-inc-post').value)||0;
   const savRtn = (parseFloat(document.getElementById('r-sav-rtn').value)||2.5)/100;
   const sav    = parseFloat(document.getElementById('r-sav').value)||0;
@@ -1362,7 +1365,6 @@ function calcDecum(){try{
     curNW=curNWFull-(propAssets-mortgageLiab);
   }
 
-  const ytr=Math.max(rAge-age,0);
   const mr=ret/12;
   const msr=savRtn/12;
   const months=ytr*12;
@@ -1385,9 +1387,10 @@ function calcDecum(){try{
   const sumEl=document.getElementById('dc-summary');
   if(sumEl) sumEl.innerHTML=
     `<b>Starting at age ${rAge} with projected ${fS(portfolioAtRetire,true)}</b><br/>` +
-    `Expenses: ${fS(exp,true)}/mo${_exp65Reduce?` → ${fS(exp65,true)}/mo after 65`:''} · Return: ${(ret*100).toFixed(1)}%/yr · Inflation: ${(inf*100).toFixed(1)}%/yr` +
+    `Expenses at ${rAge}: ${fS(expInf,true)}/mo${_exp65Reduce?` → ${fS(exp65,true)}/mo after 65`:''} · Return: ${(ret*100).toFixed(1)}%/yr` +
     (cpf>0?` · CPF Life: ${fS(cpf,true)}/mo from 65`:'') +
-    (inc>0?` · Other income: ${fS(inc,true)}/mo`:'');
+    (inc>0?` · Other income: ${fS(inc,true)}/mo`:'') +
+    `<br/><span style="font-size:10px;color:var(--muted)">Expenses shown in retirement-age terms (today's ${fS(exp,true)} inflated at ${(inf*100).toFixed(1)}%/yr)</span>`;
 
   if(!portfolioAtRetire){
     document.getElementById('dc-result').innerHTML='<div class="card" style="text-align:center;padding:20px"><div style="font-size:32px;margin-bottom:8px">📊</div><div style="font-size:14px;font-weight:700;margin-bottom:6px">No portfolio data yet</div><div style="font-size:13px;color:var(--sub)">Add a month entry in <b>+ Month</b>, then fill in your retirement details in <b>Accumulation</b> mode.</div></div>';
@@ -1514,8 +1517,8 @@ function calcRetire(){try{
   const inf=(parseFloat(document.getElementById('r-inf').value)||2.5)/100;
   const cpf=parseFloat(document.getElementById('r-cpf').value)||0;
   const expPost=parseFloat(document.getElementById('r-exp').value)||4000;
-  const _reduceExp65=document.getElementById('r-exp65-yes')&&document.getElementById('r-exp65-yes').classList.contains('tga');
-  const expPost65=_reduceExp65?expPost*0.85:expPost;
+  // Use global toggle state — same as calcDecum uses
+  const expPost65=_exp65Reduce?expPost*0.85:expPost;
   const expPre=parseFloat(document.getElementById('r-exp-pre').value)||0;
   const incPre=parseFloat(document.getElementById('r-inc-pre').value)||0;
   const incPost=parseFloat(document.getElementById('r-inc-post').value)||0;
@@ -1716,7 +1719,7 @@ function calcRetire(){try{
   <div class="divr"></div>
   <div style="font-size:10px;font-weight:800;text-transform:uppercase;letter-spacing:.08em;color:var(--green);margin-bottom:6px">After Retirement</div>
   <div class="row"><span style="font-size:13px;color:var(--sub)">Monthly expenses at ${rAge} <span style="font-size:11px;color:var(--muted)">(today's ${fS(expPost,true)} × ${(inf*100).toFixed(1)}%/yr × ${ytr}yrs)</span></span><span style="font-weight:700">${fS(infExp,true)}/mo</span></div>
-  ${_reduceExp65?`<div class="row"><span style="font-size:13px;color:var(--sub)">Monthly expenses after 65 (−15%)</span><span style="font-weight:700;color:var(--green)">${fS(infExp65,true)}/mo</span></div>`:''}
+  ${_exp65Reduce?`<div class="row"><span style="font-size:13px;color:var(--sub)">Monthly expenses after 65 (−15%)</span><span style="font-weight:700;color:var(--green)">${fS(infExp65,true)}/mo</span></div>`:''}
   ${savPost>0?`<div class="row"><span style="font-size:13px;color:var(--sub)">Reinvested savings (${parseFloat((savPostRtn*100).toFixed(2))}%/yr)</span><span style="font-weight:700;color:var(--blue)">−${fS(savPost,true)}/mo</span></div>`:''}
   ${incPost>0?`<div class="row"><span style="font-size:13px;color:var(--sub)">Other income</span><span style="font-weight:700;color:var(--green)">−${fS(incPost,true)}/mo</span></div>`:''}
   ${cpf>0?`<div class="row"><span style="font-size:13px;color:var(--sub)">CPF Life (from 65)</span><span style="font-weight:700;color:var(--green)">−${fS(cpf,true)}/mo</span></div>`:''}
