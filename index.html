@@ -1402,15 +1402,14 @@ function calcDecum(){try{
   let portfolio=portfolioAtRetire;
   let simMonths=0;
   const maxMonths=(100-rAge)*12;
+  const mrReal=((1+ret)/(1+inf)-1)/12;  // real monthly rate - matches PV formula
   while(portfolio>0&&simMonths<maxMonths){
-    const yr=simMonths/12;
-    const currentAge=rAge+yr;
-    // Use fixed retirement-age expenses — consistent with PV formula which uses real rate
-    // (real rate already accounts for inflation, so no double-inflation here)
-    const baseExp=currentAge>=65?exp65:exp;
+    const currentAge=rAge+simMonths/12;
+    // Fixed expenses at retirement-age value, grown at real rate — consistent with PV formula
+    const baseExp=currentAge>=65?exp65:expInf;
     const cpfM=currentAge>=65?cpf:0;
     const draw=Math.max(baseExp-inc-cpfM,0);
-    portfolio=portfolio*(1+mr)-draw;
+    portfolio=portfolio*(1+mrReal)-draw;
     simMonths++;
   }
 
