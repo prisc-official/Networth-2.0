@@ -1402,11 +1402,11 @@ function calcDecum(){try{
   while(portfolio>0&&simMonths<maxMonths){
     const yr=simMonths/12;
     const currentAge=rAge+yr;
-    // Expenses already in retirement-age terms — inflation only applies during drawdown
+    // Use fixed retirement-age expenses — consistent with PV formula which uses real rate
+    // (real rate already accounts for inflation, so no double-inflation here)
     const baseExp=currentAge>=65?exp65:exp;
-    const infExp2=baseExp*Math.pow(1+inf,yr);
     const cpfM=currentAge>=65?cpf:0;
-    const draw=Math.max(infExp2-inc-cpfM,0);
+    const draw=Math.max(baseExp-inc-cpfM,0);
     portfolio=portfolio*(1+mr)-draw;
     simMonths++;
   }
@@ -1605,9 +1605,10 @@ function calcRetire(){try{
 
   const futNW=cashFV+cashContribFV+cpfOA_FV+cpfSA_FV+cpfMA_FV;
 
-  // User inputs expenses at retirement age directly — no inflation adjustment needed
-  const infExp=expPost;
-  const infExp65=expPost65;
+  // User inputs today's expenses — inflate to retirement age to match decumulation simulation
+  // This ensures accumulation and decumulation are consistent
+  const infExp=expPost*Math.pow(1+inf,ytr);       // today's expenses inflated to retirement age
+  const infExp65=expPost65*Math.pow(1+inf,ytr);   // same for post-65 (reduced) expenses
   const cpfM=rAge>=65?cpf:0;
   const nd=Math.max(infExp-incPost-cpfM-savPost,0);
   const nd65=Math.max(infExp65-incPost-cpf-savPost,0);
@@ -1618,15 +1619,15 @@ function calcRetire(){try{
   let req;
   if(rAge<65&&yir>0){
     const y1=Math.min(65-rAge,yir),y2=Math.max(yir-y1,0);
-    const d1=Math.max(infExp-incPost-savPost,0);          // retire→65: expPost, no CPF Life
-    const d2=Math.max(infExp65-incPost-cpf-savPost,0);    // 65+: expPost65, with CPF Life
+    const d1=Math.max(infExp-incPost-savPost,0);          // retire→65: inflated exp, no CPF Life
+    const d2=Math.max(infExp65-incPost-cpf-savPost,0);    // 65+: inflated exp65, with CPF Life
     const pv1=mrr<=0?d1*y1*12:d1*(1-Math.pow(1+mrr,-y1*12))/mrr;
     const pv2=mrr<=0?d2*y2*12:d2*(1-Math.pow(1+mrr,-y2*12))/mrr;
     req=pv1+(y2>0?pv2/Math.pow(1+rr,y1):0);
   } else {
-    // Retiring at 65+ — use expPost65 and CPF Life from day 1
-    const nd65=Math.max(infExp65-incPost-cpfM-savPost,0);
-    req=mrr<=0?nd65*yir*12:nd65*(1-Math.pow(1+mrr,-yir*12))/mrr;
+    // Retiring at 65+ — use infExp65 and CPF Life from day 1
+    const nd65r=Math.max(infExp65-incPost-cpfM-savPost,0);
+    req=mrr<=0?nd65r*yir*12:nd65r*(1-Math.pow(1+mrr,-yir*12))/mrr;
   }
 
   const surplus=futNW-req;
@@ -1635,26 +1636,32 @@ function calcRetire(){try{
   // Save req for goals card
   D.retire._reqNest=Math.round(req);
 
-  // Earliest age scan — consistent with main calculation
+  // Earliest age scan — consistent with main calculation (inflation adjusted)
   let earliest=null;
   for(let ta=age;ta<=life;ta++){
     const mon2=(ta-age)*12;
-    const pg2=curNW*Math.pow(1+mr,mon2);
-    const sg2=msr>0?ems*(Math.pow(1+msr,mon2)-1)/msr:ems*mon2;
-    const p2=pg2+sg2;
-    const ie=expPost;  // user input is already at retirement-age value
+    const ytr2=ta-age;
+    // Three-stream projection for each candidate age
+    const cpfOA2=curCPF_OA*Math.pow(1+cpfOA_r,mon2);
+    const cpfSA2=curCPF_SA*Math.pow(1+cpfSA_r,mon2);
+    const cpfMA2=curCPF_MA*Math.pow(1+cpfOA_r,mon2);
+    const cash2=cashBase*Math.pow(1+mr,mon2)+(msr>0?ems*(Math.pow(1+msr,mon2)-1)/msr:ems*mon2);
+    const p2=cash2+cpfOA2+cpfSA2+cpfMA2;
+    // Inflate expenses to candidate retirement age
+    const ie=expPost*Math.pow(1+inf,ytr2);
+    const ie65=expPost65*Math.pow(1+inf,ytr2);
     const cpfA=ta>=65?cpf:0;
     const ry=Math.max(life-ta,0);
     let r2;
     if(ta<65&&ry>0){
       const y1b=Math.min(65-ta,ry),y2b=Math.max(ry-y1b,0);
       const d1b=Math.max(ie-incPost-savPost,0);
-      const d2b=Math.max(expPost65-incPost-cpf-savPost,0);
+      const d2b=Math.max(ie65-incPost-cpf-savPost,0);
       const pv1b=mrr<=0?d1b*y1b*12:d1b*(1-Math.pow(1+mrr,-y1b*12))/mrr;
       const pv2b=mrr<=0?d2b*y2b*12:d2b*(1-Math.pow(1+mrr,-y2b*12))/mrr;
       r2=pv1b+(y2b>0?pv2b/Math.pow(1+rr,y1b):0);
     } else {
-      const draw=Math.max(expPost65-incPost-cpfA-savPost,0);
+      const draw=Math.max(ie65-incPost-cpfA-savPost,0);
       r2=mrr<=0?draw*ry*12:draw*(1-Math.pow(1+mrr,-ry*12))/mrr;
     }
     if(p2>=r2){earliest=ta;break;}
@@ -1708,7 +1715,7 @@ function calcRetire(){try{
 
   <div class="divr"></div>
   <div style="font-size:10px;font-weight:800;text-transform:uppercase;letter-spacing:.08em;color:var(--green);margin-bottom:6px">After Retirement</div>
-  <div class="row"><span style="font-size:13px;color:var(--sub)">Monthly expenses at ${rAge}</span><span style="font-weight:700">${fS(infExp,true)}/mo</span></div>
+  <div class="row"><span style="font-size:13px;color:var(--sub)">Monthly expenses at ${rAge} <span style="font-size:11px;color:var(--muted)">(today's ${fS(expPost,true)} × ${(inf*100).toFixed(1)}%/yr × ${ytr}yrs)</span></span><span style="font-weight:700">${fS(infExp,true)}/mo</span></div>
   ${_reduceExp65?`<div class="row"><span style="font-size:13px;color:var(--sub)">Monthly expenses after 65 (−15%)</span><span style="font-weight:700;color:var(--green)">${fS(infExp65,true)}/mo</span></div>`:''}
   ${savPost>0?`<div class="row"><span style="font-size:13px;color:var(--sub)">Reinvested savings (${parseFloat((savPostRtn*100).toFixed(2))}%/yr)</span><span style="font-weight:700;color:var(--blue)">−${fS(savPost,true)}/mo</span></div>`:''}
   ${incPost>0?`<div class="row"><span style="font-size:13px;color:var(--sub)">Other income</span><span style="font-weight:700;color:var(--green)">−${fS(incPost,true)}/mo</span></div>`:''}
