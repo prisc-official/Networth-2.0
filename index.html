@@ -1366,9 +1366,20 @@ function calcDecum(){try{
   const mr=ret/12;
   const msr=savRtn/12;
   const months=ytr*12;
-  const pg=curNW*Math.pow(1+mr,months);
-  const sg=msr>0?sav*((1+msr)**months-1)/msr:sav*months;
-  const portfolioAtRetire=pg+sg;
+
+  // Three-stream projection — same as accumulation tab
+  const dcCPF_OA_r=0.025/12; const dcCPF_SA_r=0.04/12;
+  const lmvDC=latest()?latest().values:{};
+  const dcCPF_OA=toSGD(lmvDC['cpf-oa']||0,'SGD');
+  const dcCPF_SA=toSGD(lmvDC['cpf-sa']||0,'SGD')+toSGD(lmvDC['cpf-ra']||0,'SGD');
+  const dcCPF_MA=toSGD(lmvDC['cpf-ma']||0,'SGD');
+  const dcCashBase=curNW-dcCPF_OA-dcCPF_SA-dcCPF_MA;
+  const portfolioAtRetire=
+    dcCashBase*Math.pow(1+mr,months)+
+    (msr>0?sav*(Math.pow(1+msr,months)-1)/msr:sav*months)+
+    dcCPF_OA*Math.pow(1+dcCPF_OA_r,months)+
+    dcCPF_SA*Math.pow(1+dcCPF_SA_r,months)+
+    dcCPF_MA*Math.pow(1+dcCPF_OA_r,months);
 
   // Show summary
   const sumEl=document.getElementById('dc-summary');
@@ -1573,15 +1584,33 @@ function calcRetire(){try{
   const msrPost=savPostRtn/12;
   const ems=sav;
   const months=ytr*12;
-  const portfolioGrowth=curNW*Math.pow(1+mr,months);
-  const savingsGrowth=msr>0?ems*(Math.pow(1+msr,months)-1)/msr:ems*months;
-  let futNW=portfolioGrowth+savingsGrowth;
+
+  // ── Three-stream projection ──
+  // CPF OA at 2.5%/yr, CPF SA/RA at 4%/yr, cash portfolio at ret
+  const cpfOA_r=0.025/12;
+  const cpfSA_r=0.04/12;
+  const lmvP=latest()?latest().values:{};
+  const curCPF_OA=toSGD(lmvP['cpf-oa']||0,'SGD');
+  const curCPF_SA=toSGD(lmvP['cpf-sa']||0,'SGD')+toSGD(lmvP['cpf-ra']||0,'SGD'); // SA + RA
+  const curCPF_MA=toSGD(lmvP['cpf-ma']||0,'SGD');
+  // Cash = curNW minus CPF balances (CPF projected separately)
+  const cashBase=curNW-curCPF_OA-curCPF_SA-curCPF_MA;
+
+  // Each stream grows independently
+  const cashFV=cashBase*Math.pow(1+mr,months);
+  const cashContribFV=msr>0?ems*(Math.pow(1+msr,months)-1)/msr:ems*months;
+  const cpfOA_FV=curCPF_OA*Math.pow(1+cpfOA_r,months);
+  const cpfSA_FV=curCPF_SA*Math.pow(1+cpfSA_r,months);
+  const cpfMA_FV=curCPF_MA*Math.pow(1+cpfOA_r,months); // MA earns 4% but excluded from retirement use
+
+  const futNW=cashFV+cashContribFV+cpfOA_FV+cpfSA_FV+cpfMA_FV;
 
   // User inputs expenses at retirement age directly — no inflation adjustment needed
   const infExp=expPost;
   const infExp65=expPost65;
   const cpfM=rAge>=65?cpf:0;
   const nd=Math.max(infExp-incPost-cpfM-savPost,0);
+  const nd65=Math.max(infExp65-incPost-cpf-savPost,0);
 
   const rr=(1+ret)/(1+inf)-1;
   const mrr=rr/12;
@@ -1670,7 +1699,12 @@ function calcRetire(){try{
     ${preNcf!==null?`<div class="row"><span style="font-size:13px;color:var(--sub)">Net cashflow check</span><span class="${preNcf>=0?'pos':'neg'}" style="font-weight:700">${fS(preNcf,true)}</span></div>`:''}
   `:`<div class="row"><span style="font-size:13px;color:var(--sub)">Monthly surplus invested (${parseFloat((savRtn*100).toFixed(2))}%/yr)</span><span style="font-weight:700;color:var(--blue)">${fS(ems,true)}/mo</span></div>`}
   <div class="row"><span style="font-size:13px;color:var(--sub)">Current portfolio (${parseFloat((ret*100).toFixed(2))}%/yr${_propInPortfolio?'':', excl. property'})</span><span style="font-weight:700">${fS(curNW,true)}</span></div>
-  <div class="row"><span style="font-size:13px;color:var(--sub)">Projected NW at age ${rAge}</span><span style="font-weight:700;color:var(--blue)">${fS(futNW,true)}</span></div>
+  <div class="row"><span style="font-size:13px;color:var(--sub)">Projected NW at age ${rAge}</span><span style="font-weight:800;font-size:15px;color:var(--blue)">${fS(futNW,true)}</span></div>
+  <div style="background:var(--s2);border-radius:10px;padding:8px 12px;margin-bottom:4px">
+    <div style="display:flex;justify-content:space-between;font-size:11px;color:var(--sub);margin-bottom:3px"><span>Cash & investments (${(ret*100).toFixed(1)}%/yr)</span><span style="font-weight:600">${fS(cashFV+cashContribFV,true)}</span></div>
+    <div style="display:flex;justify-content:space-between;font-size:11px;color:var(--sub);margin-bottom:3px"><span>CPF OA (2.5%/yr)</span><span style="font-weight:600">${fS(cpfOA_FV,true)}</span></div>
+    <div style="display:flex;justify-content:space-between;font-size:11px;color:var(--sub)"><span>CPF SA/RA (4%/yr)</span><span style="font-weight:600">${fS(cpfSA_FV,true)}</span></div>
+  </div>
 
   <div class="divr"></div>
   <div style="font-size:10px;font-weight:800;text-transform:uppercase;letter-spacing:.08em;color:var(--green);margin-bottom:6px">After Retirement</div>
@@ -1679,7 +1713,10 @@ function calcRetire(){try{
   ${savPost>0?`<div class="row"><span style="font-size:13px;color:var(--sub)">Reinvested savings (${parseFloat((savPostRtn*100).toFixed(2))}%/yr)</span><span style="font-weight:700;color:var(--blue)">−${fS(savPost,true)}/mo</span></div>`:''}
   ${incPost>0?`<div class="row"><span style="font-size:13px;color:var(--sub)">Other income</span><span style="font-weight:700;color:var(--green)">−${fS(incPost,true)}/mo</span></div>`:''}
   ${cpf>0?`<div class="row"><span style="font-size:13px;color:var(--sub)">CPF Life (from 65)</span><span style="font-weight:700;color:var(--green)">−${fS(cpf,true)}/mo</span></div>`:''}
-  <div class="row" style="border-bottom:none"><span style="font-size:13px;color:var(--sub)">Net monthly drawdown from portfolio</span><span style="font-weight:700;color:var(--red)">${fS(nd,true)}/mo</span></div>
+  ${rAge<65
+    ?`<div class="row"><span style="font-size:13px;color:var(--sub)">Monthly drawdown at ${rAge} (before CPF Life)</span><span style="font-weight:700;color:var(--red)">${fS(nd,true)}/mo</span></div>
+  <div class="row" style="border-bottom:none"><span style="font-size:13px;color:var(--sub)">Monthly drawdown from 65 (after CPF Life ${fS(cpf,true)})</span><span style="font-weight:700;color:${nd65>0?'var(--red)':'var(--green)'}">${nd65>0?fS(nd65,true)+'/mo':'✓ Covered by CPF Life'}</span></div>`
+    :`<div class="row" style="border-bottom:none"><span style="font-size:13px;color:var(--sub)">Monthly drawdown from portfolio (incl. CPF Life ${fS(cpf,true)})</span><span style="font-weight:700;color:var(--red)">${fS(nd,true)}/mo</span></div>`}
   </div>`;
   renderGoals();
   // Disclaimer
